@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expenses · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content" id="expenses-content">
+
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div><h2 style="font-family:var(--font-display);font-size:18px;">Expense Management</h2><p class="text-muted" style="font-size:12.5px;">Admin only — track lab operating costs</p></div>
+        <div class="page-actions"><button class="btn btn-primary" id="add-expense-btn"><span data-icon="plus"></span> Add Expense</button></div>
+      </div>
+
+      <div class="stat-grid" id="expense-stat-grid" style="grid-template-columns:repeat(3,1fr);"></div>
+
+      <div class="grid-charts">
+        <div class="card"><div class="card-header"><h3>Expense Trend</h3></div><div class="card-pad"><div class="chart-box"><canvas id="chart-expense-trend"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><h3>Expense Categories</h3></div><div class="card-pad"><div class="chart-box"><canvas id="chart-expense-categories"></canvas></div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search expense, vendor…"></div>
+          <select id="filter-category"><option value="">All Categories</option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Expense</th><th>Category</th><th>Vendor</th><th>Invoice #</th><th>Amount</th><th>Mode</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="expenses-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="expenses-pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="expense-modal-title">Add Expense</h3><button class="modal-close" onclick="VLAB.closeModal('expense-modal')"><span data-icon="x"></span></button></div>
+    <div class="modal-body">
+      <form id="expense-form">
+        <input type="hidden" id="e-id">
+        <div class="form-grid">
+          <div class="field-group span-2"><label>Expense Name *</label><input type="text" id="e-name" required></div>
+          <div class="field-group"><label>Category</label><select id="e-category"></select></div>
+          <div class="field-group"><label>Vendor</label><input type="text" id="e-vendor"></div>
+          <div class="field-group"><label>Invoice Number</label><input type="text" id="e-invoice"></div>
+          <div class="field-group"><label>Amount (₹) *</label><input type="number" id="e-amount" required min="0"></div>
+          <div class="field-group"><label>Payment Mode</label><select id="e-mode"><option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option></select></div>
+          <div class="field-group"><label>Date</label><input type="date" id="e-date"></div>
+          <div class="field-group span-3"><label>Description</label><textarea id="e-desc" rows="2"></textarea></div>
+          <div class="field-group span-3">
+            <label>Attachment</label>
+            <div class="upload-box" id="e-attach-box"><span data-icon="paperclip"></span> Click to attach invoice (demo only)<input type="file" id="e-attach" style="display:none;"></div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="VLAB.closeModal('expense-modal')">Cancel</button>
+      <button class="btn btn-primary" id="expense-save-btn"><span data-icon="save"></span> Save Expense</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/expenses.js"></script>
+</body>
+</html>

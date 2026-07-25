@@ -1,0 +1,62 @@
+/* ==========================================================================
+   RESPONSIVE — Desktop → Laptop → Tablet → Mobile
+   ========================================================================== */
+
+/* Laptop */
+@media (max-width: 1280px){
+  .stat-grid{grid-template-columns:repeat(3,1fr);}
+  .grid-charts{grid-template-columns:1fr;}
+  .grid-2{grid-template-columns:1fr;}
+  .grid-3{grid-template-columns:repeat(2,1fr);}
+}
+
+/* Tablet */
+@media (max-width: 1024px){
+  .sidebar{transform:translateX(-100%);position:fixed;}
+  .app-shell.mobile-open .sidebar{transform:translateX(0);}
+  .app-shell.collapsed .sidebar{width:var(--sidebar-w);}
+  .main-area{margin-left:0 !important;}
+  .app-shell.collapsed .main-area{margin-left:0 !important;}
+  .form-grid{grid-template-columns:repeat(2,1fr);}
+  .form-grid .span-3{grid-column:span 2;}
+  .search-box{width:200px;}
+  .auth-wrap{grid-template-columns:1fr;}
+  .auth-visual{display:none;}
+}
+
+/* Mobile */
+@media (max-width: 720px){
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-3{grid-template-columns:1fr;}
+  .form-grid{grid-template-columns:1fr;}
+  .form-grid .span-2,.form-grid .span-3{grid-column:span 1;}
+  .page-content{padding:16px;}
+  .topbar{padding:0 14px;gap:10px;}
+  .search-box{display:none;}
+  .page-title-block h1{font-size:15px;}
+  .toolbar{padding:12px 14px;}
+  .toolbar .search-box{display:flex;width:100%;order:10;}
+  .card-header{padding:16px;}
+  .modal-body{padding:16px;}
+  .modal-head,.modal-foot{padding:14px 16px;}
+  .profile-btn .role,.profile-btn .pname{display:none;}
+  .profile-btn{padding:5px;}
+  .stat-card .stat-num{font-size:20px;}
+  .toast-stack{left:12px;right:12px;width:auto;top:12px;}
+  .auth-form-side{padding:24px;}
+  table{min-width:640px;}
+}
+
+@media (max-width: 420px){
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .page-actions{width:100%;}
+  .page-actions .btn{flex:1;}
+}
+
+/* Print */
+@media print{
+  .sidebar,.topbar,.toolbar,.pagination,.table-actions,.page-actions,#loading-screen,.toast-stack{display:none !important;}
+  .main-area{margin-left:0 !important;}
+  body{background:#fff;}
+  .card{box-shadow:none;border:1px solid #ccc;}
+}

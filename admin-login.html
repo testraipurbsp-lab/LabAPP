@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-visual">
+    <div class="auth-brand"><div class="mark"><span data-icon="flask"></span></div><span>Vitals Lab</span></div>
+    <div class="auth-quote">
+      <h2>Full visibility, from collection to collections.</h2>
+      <p>Administrator access unlocks financial analytics, expense tracking, and staff performance across every branch and area you serve.</p>
+    </div>
+    <div class="auth-specimen-row">
+      <div class="tube-chip"><span class="tube-cap-dot" style="background:#8E7CC3"></span>Collected</div>
+      <div class="tube-chip"><span class="tube-cap-dot" style="background:#3F76BF"></span>Processing</div>
+      <div class="tube-chip"><span class="tube-cap-dot" style="background:#4C9A6A"></span>Reviewed</div>
+      <div class="tube-chip"><span class="tube-cap-dot" style="background:#C79A2E"></span>Released</div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card fade-in">
+      <h1>Admin Sign In</h1>
+      <p class="sub">Full access — finance, staff, and lab-wide analytics.</p>
+
+      <div class="auth-tabs">
+        <a href="login.html">Staff Login</a>
+        <a href="admin-login.html" class="active">Admin Login</a>
+      </div>
+
+      <form id="login-form">
+        <div class="field-group">
+          <label>Username</label>
+          <div class="input-icon"><span data-icon="shield"></span><input type="text" id="username" placeholder="Enter admin username" required autocomplete="username"></div>
+        </div>
+        <div class="field-group">
+          <label>Password</label>
+          <div class="input-icon"><span data-icon="lock"></span><input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password"></div>
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" id="remember"> Remember me</label>
+          <a href="#" style="color:var(--primary);font-weight:600;">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block"><span data-icon="log-in"></span> Sign In as Admin</button>
+      </form>
+      <p class="auth-footer-note">© 2026 Vitals Lab · Laboratory Management Suite</p>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/login.js"></script>
+<script>initLoginPage('admin');</script>
+</body>
+</html>

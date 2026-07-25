@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+
+      <div class="stat-grid" id="payment-stat-grid" style="grid-template-columns:repeat(4,1fr);"></div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search patient, doctor, receipt…"></div>
+          <select id="filter-status"><option value="">All Status</option></select>
+          <select id="filter-method"><option value="">All Methods</option><option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option></select>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-outline btn-sm" id="export-btn"><span data-icon="download"></span> Export</button>
+          <button class="btn btn-outline btn-sm" id="print-btn"><span data-icon="printer"></span> Print</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Receipt No.</th><th>Patient</th><th>Doctor</th><th>Area</th><th>Amount</th><th>Discount</th><th>Final</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="payments-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="payments-pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/payments.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div><h2 style="font-family:var(--font-display);font-size:18px;">Reports</h2><p class="text-muted" style="font-size:12.5px;">Generate operational and financial reports</p></div>
+        <div class="page-actions">
+          <button class="btn btn-outline" id="export-report-btn"><span data-icon="download"></span> Export Excel</button>
+          <button class="btn btn-outline" id="pdf-report-btn"><span data-icon="file-text"></span> Download PDF</button>
+          <button class="btn btn-primary" id="print-report-btn"><span data-icon="printer"></span> Print</button>
+        </div>
+      </div>
+
+      <div class="card mb-22">
+        <div class="toolbar" style="border-bottom:none;">
+          <select id="report-type">
+            <option value="daily">Daily Report</option>
+            <option value="weekly">Weekly Report</option>
+            <option value="monthly">Monthly Report</option>
+            <option value="revenue">Revenue Report</option>
+            <option value="expense" id="expense-report-opt">Expense Report</option>
+            <option value="collection">Collection Report</option>
+            <option value="patient">Patient Report</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="report-stat-grid" style="grid-template-columns:repeat(4,1fr);"></div>
+
+      <div class="card">
+        <div class="card-header"><h3 id="report-table-title">Report Detail</h3></div>
+        <div class="table-wrap"><table id="report-table"><thead id="report-thead"></thead><tbody id="report-tbody"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/reports.js"></script>
+</body>
+</html>
