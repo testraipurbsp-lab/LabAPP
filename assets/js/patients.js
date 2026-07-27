@@ -250,8 +250,34 @@
       VLAB.toast(`Patient ${record.id} added successfully.`, 'success');
     }
     store.set(KEYS.patients, allPatients);
+    syncPaymentFromPatient(record);
     VLAB.closeModal('patient-modal');
     applyFilters();
+  }
+
+  // Every patient's billing fields (price/discount/payment status/method) are
+  // the single source of truth for that patient's receipt on the Payments &
+  // Billing page. This keeps the two in sync instead of being two separate,
+  // disconnected tables — one receipt per patient, upserted on every save.
+  function syncPaymentFromPatient(patient){
+    const payments = store.get(KEYS.payments, []);
+    const idx = payments.findIndex(p=>p.patientId===patient.id);
+    const paymentRecord = {
+      id: idx>-1 ? payments[idx].id : util.uid('RC', payments.length+1+Math.floor(Math.random()*900)),
+      patientId: patient.id,
+      patient: patient.name,
+      doctor: patient.doctor,
+      area: patient.area,
+      amount: patient.price,
+      discount: patient.discount,
+      finalAmount: patient.finalAmount,
+      method: patient.paymentMethod,
+      status: patient.paymentStatus,
+      date: patient.collectionDate || util.fmtDateInput(new Date())
+    };
+    if(idx>-1) payments[idx] = paymentRecord;
+    else payments.push(paymentRecord);
+    store.set(KEYS.payments, payments);
   }
 
   window.PatientsModule = {
@@ -292,6 +318,8 @@
       VLAB.confirmDelete(`Delete patient record ${id}? This cannot be undone.`, ()=>{
         allPatients = allPatients.filter(p=>p.id!==id);
         store.set(KEYS.patients, allPatients);
+        const payments = store.get(KEYS.payments, []).filter(p=>p.patientId!==id);
+        store.set(KEYS.payments, payments);
         VLAB.toast(`Patient ${id} deleted.`, 'success');
         applyFilters();
       });

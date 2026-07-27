@@ -13,6 +13,14 @@
     <div id="topbar-host"></div>
     <div class="page-content">
 
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:18px;">Payments & Billing</h2>
+          <p class="text-muted" style="font-size:12.5px;">Receipts auto-sync from Patients — or record one directly here</p>
+        </div>
+        <button class="btn btn-primary" id="add-payment-btn"><span data-icon="plus"></span> Record Payment</button>
+      </div>
+
       <div class="stat-grid" id="payment-stat-grid" style="grid-template-columns:repeat(4,1fr);"></div>
 
       <div class="card">
@@ -32,6 +40,32 @@
         </div>
         <div class="pagination" id="payments-pagination"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="payment-modal-title">Record Payment</h3><button class="modal-close" onclick="VLAB.closeModal('payment-modal')"><span data-icon="x"></span></button></div>
+    <div class="modal-body">
+      <form id="payment-form">
+        <input type="hidden" id="pay-id">
+        <div class="form-grid">
+          <div class="field-group span-2"><label>Patient Name *</label><input type="text" id="pay-patient" required placeholder="Type a name, or pick an existing patient" list="pay-patient-list"><datalist id="pay-patient-list"></datalist></div>
+          <div class="field-group"><label>Doctor</label><input type="text" id="pay-doctor"></div>
+          <div class="field-group"><label>Area</label><input type="text" id="pay-area"></div>
+          <div class="field-group"><label>Amount (₹) *</label><input type="number" id="pay-amount" min="0" required></div>
+          <div class="field-group"><label>Discount (₹)</label><input type="number" id="pay-discount" min="0" value="0"></div>
+          <div class="field-group"><label>Final Amount (₹)</label><input type="number" id="pay-final" readonly style="background:var(--bg);"></div>
+          <div class="field-group"><label>Payment Method</label><select id="pay-method"><option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option></select></div>
+          <div class="field-group"><label>Status</label><select id="pay-status"><option value="paid">Paid</option><option value="pending">Pending</option><option value="partial">Partial</option><option value="overdue">Overdue</option></select></div>
+          <div class="field-group"><label>Date</label><input type="date" id="pay-date"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="VLAB.closeModal('payment-modal')">Cancel</button>
+      <button class="btn btn-primary" id="payment-save-btn"><span data-icon="save"></span> Save Payment</button>
     </div>
   </div>
 </div>

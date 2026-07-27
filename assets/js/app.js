@@ -224,14 +224,34 @@ const VLAB = (() => {
     }
     store.set(KEYS.patients, patients);
 
-    const payments = [];
-    for(let i=1;i<=300;i++){
+    // One receipt per patient, exactly matching that patient's own billing
+    // fields — this is what keeps Payments & Billing consistent with the
+    // Patients module from the very first load (see syncPaymentFromPatient
+    // in patients.js, which keeps them in sync on every future add/edit).
+    const payments = patients.map((p,i)=>({
+      id: util.uid('RC', i+1),
+      patientId: p.id,
+      patient: p.name,
+      doctor: p.doctor,
+      area: p.area,
+      amount: p.price,
+      discount: p.discount,
+      finalAmount: p.finalAmount,
+      method: p.paymentMethod,
+      status: p.paymentStatus,
+      date: p.collectionDate
+    }));
+
+    // Plus extra standalone historical receipts (older visits, not tied to
+    // a currently-listed patient) so charts/reports have realistic volume.
+    for(let i=1;i<=200;i++){
       const p = util.choice(patients);
       const amount = util.rand(200,4000);
       const discount = util.choice([0,0,50,100]);
       const statusObj = util.choice(PAYMENT_STATUSES);
       payments.push({
-        id: util.uid('RC',i),
+        id: util.uid('RC', patients.length+i),
+        patientId: null,
         patient: p.name,
         doctor: p.doctor,
         area: p.area,
