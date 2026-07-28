@@ -20,8 +20,8 @@ of the product and documented here only, for whoever is testing it.
 
 | Role  | Page               | Username | Password  |
 |-------|--------------------|----------|-----------|
-| Staff | `login.html`       | `staff`  | `staff123`|
-| Admin | `admin-login.html` | `admin`  | `admin123`|
+| Staff | `login.html`       | `staff`  | `staff123`|staff@vlab.com
+| Admin | `admin-login.html` | `admin`  | `admin123`| admin@vlabs.com
 
 Staff accounts cannot see **Expenses**, and their **Analytics**/**Reports**
 pages hide the financial panels — enforced both in the sidebar and on the
