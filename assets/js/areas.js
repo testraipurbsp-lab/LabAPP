@@ -6,11 +6,18 @@
   let all=[], filtered=[], currentPage=1;
   const PER_PAGE = 10;
 
+  function fromDb(row){ return { ...row, collectionCharge: row.collection_charge }; }
+  function toDb(a){
+    return { name: a.name, city: a.city || null, pincode: a.pincode || null,
+             collection_charge: a.collectionCharge, status: a.status };
+  }
+
   document.addEventListener('DOMContentLoaded', async ()=>{
     const session = await VLAB.renderShell('areas');
     if(!session) return;
     VLAB.setPageTitle('Area Management', 'Vitals Lab / Area Management');
-    all = store.get(KEYS.areas, []);
+    const rows = await SB.data.list('areas', { order:'created_at', ascending:true });
+    all = rows.map(fromDb);
     applyFilters();
     wire();
   });
@@ -49,20 +56,28 @@
     VLAB.renderPagination(document.getElementById('areas-pagination'), {page,totalPages,total}, p=>{currentPage=p;render();});
   }
 
-  function save(){
+  async function save(){
     const name = document.getElementById('a-name').value.trim();
     if(!name){ VLAB.toast('Area name is required.','error'); return; }
     const id = document.getElementById('a-id').value;
     const record = {
-      id: id || util.uid('AR', all.length+1+Math.floor(Math.random()*900)),
       name, city: document.getElementById('a-city').value,
       pincode: document.getElementById('a-pincode').value,
       collectionCharge: Number(document.getElementById('a-charge').value)||0,
       status: document.getElementById('a-status').value
     };
-    if(id){ all[all.findIndex(x=>x.id===id)]=record; VLAB.toast('Area updated.','success'); }
-    else{ all.push(record); VLAB.toast('Area added.','success'); }
-    store.set(KEYS.areas, all);
+
+    const btn = document.getElementById('area-save-btn');
+    btn.disabled = true;
+    const saved = id
+      ? await SB.data.update('areas', id, toDb(record))
+      : await SB.data.insert('areas', toDb(record));
+    btn.disabled = false;
+
+    if(!saved){ VLAB.toast('Could not save area — please try again.', 'error'); return; }
+    const full = fromDb(saved);
+    if(id){ all[all.findIndex(x=>x.id===id)]=full; VLAB.toast('Area updated.','success'); }
+    else{ all.push(full); VLAB.toast('Area added.','success'); }
     VLAB.closeModal('area-modal');
     applyFilters();
   }
@@ -70,7 +85,7 @@
   window.AreasModule = {
     edit(id){
       const a = all.find(x=>x.id===id); if(!a) return;
-      document.getElementById('area-modal-title').textContent = `Edit Area — ${a.id}`;
+      document.getElementById('area-modal-title').textContent = `Edit Area — ${a.name}`;
       document.getElementById('a-id').value=a.id;
       document.getElementById('a-name').value=a.name;
       document.getElementById('a-city').value=a.city;
@@ -80,9 +95,10 @@
       VLAB.openModal('area-modal');
     },
     remove(id){
-      VLAB.confirmDelete('Delete this area?', ()=>{
+      VLAB.confirmDelete('Delete this area?', async ()=>{
+        const ok = await SB.data.remove('areas', id);
+        if(!ok){ VLAB.toast('Could not delete area — please try again.', 'error'); return; }
         all = all.filter(x=>x.id!==id);
-        store.set(KEYS.areas, all);
         VLAB.toast('Area deleted.','success');
         applyFilters();
       });

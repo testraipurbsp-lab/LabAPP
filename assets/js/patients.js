@@ -61,7 +61,7 @@
   });
 
   async function populateFilterOptions(){
-    const areas = store.get(KEYS.areas, []);
+    const areas = await SB.data.list('areas', { order:'name', ascending:true });
     const doctors = await SB.data.list('doctors', { order:'name', ascending:true });
     const areaSel = document.getElementById('filter-area');
     const docSel = document.getElementById('filter-doctor');
@@ -74,7 +74,7 @@
   }
 
   async function populateFormSelects(){
-    const areas = store.get(KEYS.areas, []).filter(a=>a.status==='Active');
+    const areas = (await SB.data.list('areas', { order:'name', ascending:true })).filter(a=>a.status==='Active');
     const doctors = (await SB.data.list('doctors', { order:'name', ascending:true })).filter(d=>d.status==='Active');
     const tests = store.get(KEYS.tests, []);
 
