@@ -48,8 +48,8 @@
 
     const rows = await SB.data.list('patients', { order:'created_at', ascending:true });
     allPatients = rows.map(fromDb);
-    populateFilterOptions();
-    populateFormSelects();
+    await populateFilterOptions();
+    await populateFormSelects();
     applyFilters();
     wireEvents();
 
@@ -60,9 +60,9 @@
     if(editId){ openEditModal(editId); }
   });
 
-  function populateFilterOptions(){
+  async function populateFilterOptions(){
     const areas = store.get(KEYS.areas, []);
-    const doctors = store.get(KEYS.doctors, []);
+    const doctors = await SB.data.list('doctors', { order:'name', ascending:true });
     const areaSel = document.getElementById('filter-area');
     const docSel = document.getElementById('filter-doctor');
     areas.forEach(a=> areaSel.insertAdjacentHTML('beforeend', `<option value="${a.name}">${a.name}</option>`));
@@ -73,9 +73,9 @@
     CAP_STATUSES.forEach(s=> repSel.insertAdjacentHTML('beforeend', `<option value="${s.key}">${s.label}</option>`));
   }
 
-  function populateFormSelects(){
+  async function populateFormSelects(){
     const areas = store.get(KEYS.areas, []).filter(a=>a.status==='Active');
-    const doctors = store.get(KEYS.doctors, []).filter(d=>d.status==='Active');
+    const doctors = (await SB.data.list('doctors', { order:'name', ascending:true })).filter(d=>d.status==='Active');
     const tests = store.get(KEYS.tests, []);
 
     fillSelect('p-area', areas.map(a=>a.name));

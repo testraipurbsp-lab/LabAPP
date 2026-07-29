@@ -6,11 +6,23 @@
   let all = [], filtered = [], currentPage = 1;
   const PER_PAGE = 10;
 
+  // doctors table columns already match the JS field names 1:1 except for
+  // the id (real UUID) vs the friendly doctor_code shown in the UI.
+  function fromDb(row){ return { ...row, doctorCode: row.doctor_code }; }
+  function toDb(d){
+    return {
+      name: d.name, specialization: d.specialization || null, hospital: d.hospital || null,
+      clinic: d.clinic || null, phone: d.phone, email: d.email || null,
+      address: d.address || null, commission: d.commission, status: d.status, notes: d.notes || null
+    };
+  }
+
   document.addEventListener('DOMContentLoaded', async ()=>{
     const session = await VLAB.renderShell('doctors');
     if(!session) return;
     VLAB.setPageTitle('Doctors', 'Vitals Lab / Doctor Management');
-    all = store.get(KEYS.doctors, []);
+    const rows = await SB.data.list('doctors', { order:'created_at', ascending:true });
+    all = rows.map(fromDb);
     applyFilters();
     wire();
   });
@@ -41,7 +53,7 @@
     const {items,page,totalPages,total} = VLAB.paginate([...filtered].reverse(), currentPage, PER_PAGE);
     document.getElementById('doctors-table-body').innerHTML = items.map(d=>`
       <tr>
-        <td><div class="name-cell"><div class="avatar-sm">${util.initials(d.name)}</div><div><div class="cell-name">${util.escapeHtml(d.name)}</div><div class="cell-sub">${d.id}</div></div></div></td>
+        <td><div class="name-cell"><div class="avatar-sm">${util.initials(d.name)}</div><div><div class="cell-name">${util.escapeHtml(d.name)}</div><div class="cell-sub">${d.doctorCode||d.id}</div></div></div></td>
         <td>${util.escapeHtml(d.specialization)}</td>
         <td>${util.escapeHtml(d.hospital)}<div class="cell-sub">${util.escapeHtml(d.clinic||'')}</div></td>
         <td>${d.phone}</td>
@@ -55,13 +67,12 @@
     VLAB.renderPagination(document.getElementById('doctors-pagination'), {page,totalPages,total}, p=>{currentPage=p;render();});
   }
 
-  function save(){
+  async function save(){
     const name = document.getElementById('d-name').value.trim();
     const phone = document.getElementById('d-phone').value.trim();
     if(!name || !phone){ VLAB.toast('Doctor name and phone are required.','error'); return; }
     const id = document.getElementById('d-id').value;
     const record = {
-      id: id || util.uid('DR', all.length+1+Math.floor(Math.random()*900)),
       name, specialization: document.getElementById('d-spec').value,
       hospital: document.getElementById('d-hospital').value,
       clinic: document.getElementById('d-clinic').value,
@@ -71,9 +82,18 @@
       status: document.getElementById('d-status').value,
       notes: document.getElementById('d-notes').value
     };
-    if(id){ all[all.findIndex(x=>x.id===id)] = record; VLAB.toast('Doctor updated.','success'); }
-    else{ all.push(record); VLAB.toast('Doctor added.','success'); }
-    store.set(KEYS.doctors, all);
+
+    const btn = document.getElementById('doctor-save-btn');
+    btn.disabled = true;
+    const saved = id
+      ? await SB.data.update('doctors', id, toDb(record))
+      : await SB.data.insert('doctors', toDb(record));
+    btn.disabled = false;
+
+    if(!saved){ VLAB.toast('Could not save doctor — please try again.', 'error'); return; }
+    const full = fromDb(saved);
+    if(id){ all[all.findIndex(x=>x.id===id)] = full; VLAB.toast('Doctor updated.','success'); }
+    else{ all.push(full); VLAB.toast('Doctor added.','success'); }
     VLAB.closeModal('doctor-modal');
     applyFilters();
   }
@@ -81,7 +101,7 @@
   window.DoctorsModule = {
     edit(id){
       const d = all.find(x=>x.id===id); if(!d) return;
-      document.getElementById('doctor-modal-title').textContent = `Edit Doctor — ${d.id}`;
+      document.getElementById('doctor-modal-title').textContent = `Edit Doctor — ${d.doctorCode||d.id}`;
       document.getElementById('d-id').value=d.id;
       document.getElementById('d-name').value=d.name;
       document.getElementById('d-spec').value=d.specialization;
@@ -96,9 +116,10 @@
       VLAB.openModal('doctor-modal');
     },
     remove(id){
-      VLAB.confirmDelete('Delete this doctor record?', ()=>{
+      VLAB.confirmDelete('Delete this doctor record?', async ()=>{
+        const ok = await SB.data.remove('doctors', id);
+        if(!ok){ VLAB.toast('Could not delete doctor — please try again.', 'error'); return; }
         all = all.filter(x=>x.id!==id);
-        store.set(KEYS.doctors, all);
         VLAB.toast('Doctor deleted.','success');
         applyFilters();
       });
