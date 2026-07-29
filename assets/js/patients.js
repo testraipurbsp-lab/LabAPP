@@ -8,12 +8,46 @@
   let currentPage = 1;
   const PER_PAGE = 10;
 
+  // Supabase's `patients` table uses snake_case columns; the rest of this
+  // file (rendering, filtering, the form) keeps using the same camelCase
+  // shape it always has, so these two helpers are the only translation layer.
+  function fromDb(row){
+    return {
+      id: row.id, patientCode: row.patient_code, name: row.name, gender: row.gender,
+      guardianName: row.guardian_name, dob: row.dob, age: row.age, phone: row.phone,
+      altPhone: row.alt_phone, email: row.email, address: row.address, city: row.city,
+      area: row.area, doctor: row.doctor, bloodGroup: row.blood_group, height: row.height,
+      weight: row.weight, emergencyContact: row.emergency_contact, reference: row.reference,
+      testCategory: row.test_category, testName: row.test_name, sampleType: row.sample_type,
+      collectionDate: row.collection_date, reportDate: row.report_date, price: row.price,
+      discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
+      paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
+      photo: row.photo_url
+    };
+  }
+  function toDb(p){
+    return {
+      name: p.name, gender: p.gender, guardian_name: p.guardianName || null,
+      dob: p.dob || null, age: p.age, phone: p.phone, alt_phone: p.altPhone || null,
+      email: p.email || null, address: p.address || null, city: p.city || null,
+      area: p.area, doctor: p.doctor, blood_group: p.bloodGroup || null,
+      height: p.height || null, weight: p.weight || null,
+      emergency_contact: p.emergencyContact || null, reference: p.reference || null,
+      test_category: p.testCategory || null, test_name: p.testName, sample_type: p.sampleType || null,
+      collection_date: p.collectionDate || null, report_date: p.reportDate || null,
+      price: p.price, discount: p.discount, final_amount: p.finalAmount,
+      payment_status: p.paymentStatus, payment_method: p.paymentMethod || null,
+      report_status: p.reportStatus, remarks: p.remarks || null, photo_url: p.photo || null
+    };
+  }
+
   document.addEventListener('DOMContentLoaded', async ()=>{
     const session = await VLAB.renderShell('patients');
     if(!session) return;
     VLAB.setPageTitle('Patients', 'Vitals Lab / Patient Management');
 
-    allPatients = store.get(KEYS.patients, []);
+    const rows = await SB.data.list('patients', { order:'created_at', ascending:true });
+    allPatients = rows.map(fromDb);
     populateFilterOptions();
     populateFormSelects();
     applyFilters();
@@ -95,7 +129,7 @@
     const report = document.getElementById('filter-report').value;
 
     filtered = allPatients.filter(p=>{
-      const matchesQ = !q || [p.name,p.phone,p.doctor,p.testName,p.id].some(v=>String(v).toLowerCase().includes(q));
+      const matchesQ = !q || [p.name,p.phone,p.doctor,p.testName,p.patientCode].some(v=>String(v).toLowerCase().includes(q));
       return matchesQ
         && (!area || p.area===area)
         && (!doctor || p.doctor===doctor)
@@ -114,7 +148,7 @@
       const rs = util.statusMeta(CAP_STATUSES, p.reportStatus);
       const ps = util.statusMeta(PAYMENT_STATUSES, p.paymentStatus);
       return `<tr>
-        <td class="mono">${p.id}</td>
+        <td class="mono">${p.patientCode||p.id}</td>
         <td><div class="name-cell"><div class="avatar-sm">${util.initials(p.name)}</div><div><div class="cell-name">${util.escapeHtml(p.name)}</div><div class="cell-sub">${p.gender}, ${p.age}y</div></div></div></td>
         <td>${p.phone}</td>
         <td>${util.escapeHtml(p.doctor)}</td>
@@ -165,7 +199,7 @@
   function openEditModal(id){
     const p = allPatients.find(x=>x.id===id);
     if(!p) return;
-    document.getElementById('patient-modal-title').textContent = `Edit Patient — ${p.id}`;
+    document.getElementById('patient-modal-title').textContent = `Edit Patient — ${p.patientCode||p.id}`;
     document.getElementById('p-id').value = p.id;
     document.getElementById('p-name').value = p.name;
     document.getElementById('p-gender').value = p.gender;
@@ -199,7 +233,7 @@
     VLAB.openModal('patient-modal');
   }
 
-  function savePatient(){
+  async function savePatient(){
     const name = document.getElementById('p-name').value.trim();
     const phone = document.getElementById('p-phone').value.trim();
     const area = document.getElementById('p-area').value;
@@ -214,7 +248,6 @@
     const discount = Number(document.getElementById('p-discount').value)||0;
 
     const record = {
-      id: id || util.uid('PT', allPatients.length+1+Math.floor(Math.random()*900)),
       name, gender: document.getElementById('p-gender').value,
       guardianName: document.getElementById('p-guardian').value,
       dob: document.getElementById('p-dob').value,
@@ -241,16 +274,31 @@
       photo:''
     };
 
+    const btn = document.getElementById('patient-save-btn');
+    btn.disabled = true;
+
+    let saved;
+    if(id){
+      saved = await SB.data.update('patients', id, toDb(record));
+    }else{
+      saved = await SB.data.insert('patients', toDb(record));
+    }
+    btn.disabled = false;
+
+    if(!saved){
+      VLAB.toast('Could not save patient — please try again.', 'error');
+      return;
+    }
+    const full = fromDb(saved);
     if(id){
       const idx = allPatients.findIndex(p=>p.id===id);
-      allPatients[idx] = record;
-      VLAB.toast(`Patient ${id} updated successfully.`, 'success');
+      allPatients[idx] = full;
+      VLAB.toast(`Patient ${full.patientCode||full.id} updated successfully.`, 'success');
     }else{
-      allPatients.push(record);
-      VLAB.toast(`Patient ${record.id} added successfully.`, 'success');
+      allPatients.push(full);
+      VLAB.toast(`Patient ${full.patientCode||full.id} added successfully.`, 'success');
     }
-    store.set(KEYS.patients, allPatients);
-    syncPaymentFromPatient(record);
+    syncPaymentFromPatient(full);
     VLAB.closeModal('patient-modal');
     applyFilters();
   }
@@ -289,7 +337,7 @@
       document.getElementById('view-patient-body').innerHTML = `
         <div class="flex-between mb-16">
           <div class="name-cell"><div class="avatar-sm" style="width:46px;height:46px;font-size:15px;">${util.initials(p.name)}</div>
-          <div><div style="font-weight:700;font-size:15px;">${util.escapeHtml(p.name)}</div><div class="cell-sub mono">${p.id}</div></div></div>
+          <div><div style="font-weight:700;font-size:15px;">${util.escapeHtml(p.name)}</div><div class="cell-sub mono">${p.patientCode||p.id}</div></div></div>
           <div style="display:flex;gap:6px;"><span class="pill ${ps.pill}"><span class="cap-dot"></span>${ps.label}</span><span class="pill ${rs.pill}"><span class="cap-dot"></span>${rs.label}</span></div>
         </div>
         <div class="form-grid" style="font-size:12.5px;">
@@ -315,12 +363,14 @@
     edit(id){ openEditModal(id); },
     print(id){ window.print(); },
     remove(id){
-      VLAB.confirmDelete(`Delete patient record ${id}? This cannot be undone.`, ()=>{
+      const p = allPatients.find(x=>x.id===id);
+      VLAB.confirmDelete(`Delete patient record ${p?p.patientCode:id}? This cannot be undone.`, async ()=>{
+        const ok = await SB.data.remove('patients', id);
+        if(!ok){ VLAB.toast('Could not delete patient — please try again.', 'error'); return; }
         allPatients = allPatients.filter(p=>p.id!==id);
-        store.set(KEYS.patients, allPatients);
         const payments = store.get(KEYS.payments, []).filter(p=>p.patientId!==id);
         store.set(KEYS.payments, payments);
-        VLAB.toast(`Patient ${id} deleted.`, 'success');
+        VLAB.toast(`Patient ${p?p.patientCode:id} deleted.`, 'success');
         applyFilters();
       });
     }
@@ -332,7 +382,7 @@
 
   function exportPatientsCSV(){
     const headers = ['Patient ID','Name','Gender','Age','Phone','Doctor','Area','Test','Price','Discount','Final Amount','Payment Status','Report Status','Collection Date'];
-    const rows = filtered.map(p=>[p.id,p.name,p.gender,p.age,p.phone,p.doctor,p.area,p.testName,p.price,p.discount,p.finalAmount,p.paymentStatus,p.reportStatus,p.collectionDate]);
+    const rows = filtered.map(p=>[p.patientCode||p.id,p.name,p.gender,p.age,p.phone,p.doctor,p.area,p.testName,p.price,p.discount,p.finalAmount,p.paymentStatus,p.reportStatus,p.collectionDate]);
     VLAB.exportCSV('patients.csv', headers, rows);
   }
 })();
