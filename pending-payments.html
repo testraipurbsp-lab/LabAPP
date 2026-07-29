@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Payments · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div><h2 style="font-family:var(--font-display);font-size:18px;">Pending Payments</h2><p class="text-muted" style="font-size:12.5px;">Follow up on outstanding dues</p></div>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search patient, phone…"></div>
+          <select id="filter-status"><option value="">All Status</option><option value="pending">Pending</option><option value="overdue">Overdue</option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient</th><th>Doctor</th><th>Phone</th><th>Area</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="pending-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pending-pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/pending-payments.js"></script>
+</body>
+</html>

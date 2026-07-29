@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+
+    <div class="page-content">
+
+      <div id="stat-grid" class="stat-grid">
+        <!-- populated by dashboard.js -->
+      </div>
+
+      <div class="grid-charts">
+        <div class="card fade-in">
+          <div class="card-header"><h3><span data-icon="trending-up" data-icon-class="icon-sm"></span>Monthly Revenue</h3><span class="sub">Last 6 months</span></div>
+          <div class="card-pad"><div class="chart-box"><canvas id="chart-revenue"></canvas></div></div>
+        </div>
+        <div class="card fade-in">
+          <div class="card-header"><h3><span data-icon="users" data-icon-class="icon-sm"></span>Daily Patients</h3><span class="sub">Last 7 days</span></div>
+          <div class="card-pad"><div class="chart-box"><canvas id="chart-daily-patients"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card fade-in">
+          <div class="card-header"><h3>Area Wise Patients</h3></div>
+          <div class="card-pad"><div class="chart-box"><canvas id="chart-area-wise"></canvas></div></div>
+        </div>
+        <div class="card fade-in">
+          <div class="card-header"><h3>Test Categories</h3></div>
+          <div class="card-pad"><div class="chart-box"><canvas id="chart-test-categories"></canvas></div></div>
+        </div>
+        <div class="card fade-in">
+          <div class="card-header"><h3>Payment Trend</h3></div>
+          <div class="card-pad"><div class="chart-box"><canvas id="chart-payment-trend"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="card fade-in mb-22">
+        <div class="card-header"><h3><span data-icon="dollar-sign" data-icon-class="icon-sm"></span>Revenue vs Expenses</h3><span class="sub">Last 6 months</span></div>
+        <div class="card-pad"><div class="chart-box tall"><canvas id="chart-rev-exp"></canvas></div></div>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-header">
+          <h3><span data-icon="activity" data-icon-class="icon-sm"></span>Recent Patients</h3>
+          <button class="btn btn-outline btn-sm" id="view-all-patients">View all <span data-icon="arrow-right" data-icon-class="icon-sm"></span></button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Patient ID</th><th>Name</th><th>Phone</th><th>Doctor</th><th>Area</th><th>Test</th><th>Payment</th><th>Report Status</th><th>Date</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="recent-patients-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/dashboard.js"></script>
+</body>
+</html>

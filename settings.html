@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+      <div class="mb-16"><h2 style="font-family:var(--font-display);font-size:18px;">Settings</h2><p class="text-muted" style="font-size:12.5px;">Lab profile, preferences and security</p></div>
+
+      <div class="grid-2">
+        <div class="card card-pad">
+          <div class="section-title"><span data-icon="flask" data-icon-class="icon-sm"></span> Lab Profile</div>
+          <form id="lab-form">
+            <div class="form-grid">
+              <div class="field-group span-2"><label>Lab Name</label><input type="text" id="s-labname"></div>
+              <div class="field-group"><label>Phone</label><input type="tel" id="s-phone"></div>
+              <div class="field-group span-2"><label>Email</label><input type="email" id="s-email"></div>
+              <div class="field-group"><label>GST Number</label><input type="text" id="s-gst"></div>
+              <div class="field-group span-3"><label>Address</label><input type="text" id="s-address"></div>
+              <div class="field-group span-3">
+                <label>Logo</label>
+                <div class="upload-box" id="logo-box"><span data-icon="image" data-icon-class="icon-lg"></span>Click to upload lab logo (demo only)<input type="file" id="s-logo" accept="image/*" style="display:none;"></div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:16px;"><span data-icon="save"></span> Save Changes</button>
+          </form>
+        </div>
+
+        <div>
+          <div class="card card-pad mb-22">
+            <div class="section-title"><span data-icon="user" data-icon-class="icon-sm"></span> Profile</div>
+            <div class="flex-between" style="margin-bottom:18px;">
+              <div class="name-cell"><div class="avatar" style="width:48px;height:48px;font-size:16px;" id="profile-avatar"></div>
+                <div><div style="font-weight:700;" id="profile-name-display"></div><div class="cell-sub" id="profile-role-display"></div></div>
+              </div>
+            </div>
+            <div class="field-group"><label>Display Name</label><input type="text" id="profile-name"></div>
+            <button class="btn btn-outline btn-sm" id="save-profile-btn"><span data-icon="save"></span> Update Profile</button>
+          </div>
+
+          <div class="card card-pad mb-22">
+            <div class="section-title"><span data-icon="lock" data-icon-class="icon-sm"></span> Change Password</div>
+            <div class="field-group"><label>Current Password</label><input type="password" id="cur-pass"></div>
+            <div class="field-group"><label>New Password</label><input type="password" id="new-pass"></div>
+            <button class="btn btn-outline btn-sm" id="change-pass-btn"><span data-icon="key"></span> Change Password</button>
+          </div>
+
+          <div class="card card-pad">
+            <div class="section-title"><span data-icon="moon" data-icon-class="icon-sm"></span> Appearance</div>
+            <div class="flex-between">
+              <div><div style="font-weight:600;font-size:13px;">Dark Mode</div><div class="cell-sub">Switch between light and dark themes</div></div>
+              <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                <input type="checkbox" id="dark-mode-toggle" style="opacity:0;width:0;height:0;">
+                <span id="toggle-track" style="position:absolute;inset:0;background:var(--border);border-radius:20px;cursor:pointer;transition:.2s;"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/settings.js"></script>
+</body>
+</html>

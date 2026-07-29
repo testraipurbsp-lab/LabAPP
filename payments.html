@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:18px;">Payments & Billing</h2>
+          <p class="text-muted" style="font-size:12.5px;">Receipts auto-sync from Patients — or record one directly here</p>
+        </div>
+        <button class="btn btn-primary" id="add-payment-btn"><span data-icon="plus"></span> Record Payment</button>
+      </div>
+
+      <div class="stat-grid" id="payment-stat-grid" style="grid-template-columns:repeat(4,1fr);"></div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search patient, doctor, receipt…"></div>
+          <select id="filter-status"><option value="">All Status</option></select>
+          <select id="filter-method"><option value="">All Methods</option><option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option></select>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-outline btn-sm" id="export-btn"><span data-icon="download"></span> Export</button>
+          <button class="btn btn-outline btn-sm" id="print-btn"><span data-icon="printer"></span> Print</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Receipt No.</th><th>Patient</th><th>Doctor</th><th>Area</th><th>Amount</th><th>Discount</th><th>Final</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="payments-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="payments-pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="payment-modal-title">Record Payment</h3><button class="modal-close" onclick="VLAB.closeModal('payment-modal')"><span data-icon="x"></span></button></div>
+    <div class="modal-body">
+      <form id="payment-form">
+        <input type="hidden" id="pay-id">
+        <div class="form-grid">
+          <div class="field-group span-2"><label>Patient Name *</label><input type="text" id="pay-patient" required placeholder="Type a name, or pick an existing patient" list="pay-patient-list"><datalist id="pay-patient-list"></datalist></div>
+          <div class="field-group"><label>Doctor</label><input type="text" id="pay-doctor"></div>
+          <div class="field-group"><label>Area</label><input type="text" id="pay-area"></div>
+          <div class="field-group"><label>Amount (₹) *</label><input type="number" id="pay-amount" min="0" required></div>
+          <div class="field-group"><label>Discount (₹)</label><input type="number" id="pay-discount" min="0" value="0"></div>
+          <div class="field-group"><label>Final Amount (₹)</label><input type="number" id="pay-final" readonly style="background:var(--bg);"></div>
+          <div class="field-group"><label>Payment Method</label><select id="pay-method"><option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option></select></div>
+          <div class="field-group"><label>Status</label><select id="pay-status"><option value="paid">Paid</option><option value="pending">Pending</option><option value="partial">Partial</option><option value="overdue">Overdue</option></select></div>
+          <div class="field-group"><label>Date</label><input type="date" id="pay-date"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="VLAB.closeModal('payment-modal')">Cancel</button>
+      <button class="btn btn-primary" id="payment-save-btn"><span data-icon="save"></span> Save Payment</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/payments.js"></script>
+</body>
+</html>

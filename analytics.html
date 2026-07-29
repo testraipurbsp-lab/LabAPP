@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+      <div class="mb-16"><h2 style="font-family:var(--font-display);font-size:18px;">Analytics</h2><p class="text-muted" style="font-size:12.5px;">Lab-wide performance insights</p></div>
+
+      <div class="grid-charts">
+        <div class="card"><div class="card-header"><h3>Revenue Analytics</h3><span class="sub">Last 6 months</span></div><div class="card-pad"><div class="chart-box"><canvas id="chart-revenue-analytics"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><h3>Patient Growth</h3><span class="sub">Last 6 months</span></div><div class="card-pad"><div class="chart-box"><canvas id="chart-patient-growth"></canvas></div></div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card"><div class="card-header"><h3>Doctor Performance</h3><span class="sub">Referrals this month</span></div><div class="card-pad"><div class="chart-box tall"><canvas id="chart-doctor-perf"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><h3>Area Wise Collection</h3></div><div class="card-pad"><div class="chart-box tall"><canvas id="chart-area-collection"></canvas></div></div></div>
+      </div>
+
+      <div class="grid-charts">
+        <div class="card"><div class="card-header"><h3>Popular Tests</h3></div><div class="card-pad"><div class="chart-box"><canvas id="chart-popular-tests"></canvas></div></div></div>
+        <div class="card" id="income-expense-card"><div class="card-header"><h3>Income vs Expenses</h3></div><div class="card-pad"><div class="chart-box"><canvas id="chart-income-expense"></canvas></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/analytics.js"></script>
+</body>
+</html>

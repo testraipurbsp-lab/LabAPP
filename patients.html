@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patients · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+
+    <div class="page-content">
+
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:18px;">Patient Records</h2>
+          <p class="text-muted" style="font-size:12.5px;">Manage registrations, samples and reports</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-outline" id="export-csv-btn"><span data-icon="download"></span> Export CSV</button>
+          <button class="btn btn-outline" id="print-btn"><span data-icon="printer"></span> Print</button>
+          <button class="btn btn-primary" id="add-patient-btn"><span data-icon="plus"></span> Add Patient</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search name, phone, doctor…"></div>
+          <select id="filter-area"><option value="">All Areas</option></select>
+          <select id="filter-doctor"><option value="">All Doctors</option></select>
+          <select id="filter-gender"><option value="">All Genders</option><option>Male</option><option>Female</option></select>
+          <select id="filter-payment"><option value="">All Payment Status</option></select>
+          <select id="filter-report"><option value="">All Report Status</option></select>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-ghost btn-sm" id="clear-filters-btn"><span data-icon="rotate-ccw"></span> Reset</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Patient ID</th><th>Name</th><th>Phone</th><th>Doctor</th><th>Area</th><th>Test</th><th>Amount</th><th>Payment</th><th>Report</th><th>Date</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="patients-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="patients-pagination"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT PATIENT MODAL -->
+<div class="modal-overlay" id="patient-modal">
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <h3 id="patient-modal-title">Add New Patient</h3>
+      <button class="modal-close" onclick="VLAB.closeModal('patient-modal')"><span data-icon="x"></span></button>
+    </div>
+    <div class="modal-body">
+      <form id="patient-form">
+        <input type="hidden" id="p-id">
+
+        <fieldset>
+          <legend>Personal Information</legend>
+          <div class="form-grid">
+            <div class="field-group span-2"><label>Patient Name *</label><input type="text" id="p-name" required></div>
+            <div class="field-group"><label>Gender *</label><select id="p-gender" required><option>Male</option><option>Female</option><option>Other</option></select></div>
+            <div class="field-group"><label>Father/Husband Name</label><input type="text" id="p-guardian"></div>
+            <div class="field-group"><label>Date of Birth</label><input type="date" id="p-dob"></div>
+            <div class="field-group"><label>Age</label><input type="number" id="p-age" min="0" max="120"></div>
+            <div class="field-group"><label>Blood Group</label><select id="p-blood"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></div>
+            <div class="field-group"><label>Height (cm)</label><input type="number" id="p-height"></div>
+            <div class="field-group"><label>Weight (kg)</label><input type="number" id="p-weight"></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Contact Details</legend>
+          <div class="form-grid">
+            <div class="field-group"><label>Phone Number *</label><input type="tel" id="p-phone" required></div>
+            <div class="field-group"><label>Alternative Number</label><input type="tel" id="p-altphone"></div>
+            <div class="field-group"><label>Emergency Contact</label><input type="tel" id="p-emergency"></div>
+            <div class="field-group"><label>Email</label><input type="email" id="p-email"></div>
+            <div class="field-group span-2"><label>Address</label><input type="text" id="p-address"></div>
+            <div class="field-group"><label>City</label><input type="text" id="p-city"></div>
+            <div class="field-group"><label>Area *</label><select id="p-area" required></select></div>
+            <div class="field-group"><label>Reference</label><select id="p-reference"><option>Self</option><option>Doctor Referral</option><option>Camp</option><option>Online</option><option>Walk-in</option></select></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Test & Sample</legend>
+          <div class="form-grid">
+            <div class="field-group"><label>Doctor Name *</label><select id="p-doctor" required></select></div>
+            <div class="field-group"><label>Test Category</label><select id="p-testcategory"></select></div>
+            <div class="field-group"><label>Test Name *</label><select id="p-testname" required></select></div>
+            <div class="field-group"><label>Sample Type</label><select id="p-sampletype"></select></div>
+            <div class="field-group"><label>Collection Date</label><input type="date" id="p-collectiondate"></div>
+            <div class="field-group"><label>Report Date</label><input type="date" id="p-reportdate"></div>
+            <div class="field-group"><label>Report Status</label><select id="p-reportstatus"></select></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Billing</legend>
+          <div class="form-grid">
+            <div class="field-group"><label>Price (₹)</label><input type="number" id="p-price" min="0"></div>
+            <div class="field-group"><label>Discount (₹)</label><input type="number" id="p-discount" min="0"></div>
+            <div class="field-group"><label>Final Amount (₹)</label><input type="number" id="p-final" readonly style="background:var(--bg);"></div>
+            <div class="field-group"><label>Payment Status</label><select id="p-paymentstatus"></select></div>
+            <div class="field-group"><label>Payment Method</label><select id="p-paymentmethod"></select></div>
+            <div class="field-group span-2">
+              <label>Photo Upload</label>
+              <div class="upload-box" id="p-photo-box"><span data-icon="camera" data-icon-class="icon-lg"></span>Click to upload patient photo (demo only)<input type="file" id="p-photo" accept="image/*" style="display:none;"></div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Remarks</legend>
+          <div class="field-group"><textarea id="p-remarks" rows="3" placeholder="Additional notes about the patient or sample…"></textarea></div>
+        </fieldset>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" id="patient-reset-btn"><span data-icon="rotate-ccw"></span> Reset</button>
+      <button class="btn btn-outline" onclick="VLAB.closeModal('patient-modal')">Cancel</button>
+      <button class="btn btn-primary" id="patient-save-btn"><span data-icon="save"></span> Save Patient</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW PATIENT MODAL -->
+<div class="modal-overlay" id="view-patient-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Patient Record</h3><button class="modal-close" onclick="VLAB.closeModal('view-patient-modal')"><span data-icon="x"></span></button></div>
+    <div class="modal-body" id="view-patient-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="window.print()"><span data-icon="printer"></span> Print</button>
+      <button class="btn btn-primary" onclick="VLAB.closeModal('view-patient-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/patients.js"></script>
+</body>
+</html>
