@@ -1,0 +1,111 @@
+/* ==========================================================================
+   report-print.js — renders one patient's report_data as a formatted,
+   letterhead-style document (GD Diagnostics-style layout), ready to print
+   or save as PDF. Read-only page: values are entered from patients.html.
+   ========================================================================== */
+(function(){
+  const { util } = VLAB;
+
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    const session = await VLAB.auth.requireAuth();
+    if(!session) return;
+
+    const id = new URLSearchParams(window.location.search).get('id');
+    const root = document.getElementById('report-root');
+    if(!id){ root.innerHTML = '<div class="report-loading">No patient specified.</div>'; return; }
+
+    const [{ data: patient, error }, settings] = await Promise.all([
+      SB.client.from('patients').select('*').eq('id', id).single(),
+      SB.data.getSettings()
+    ]);
+
+    if(error || !patient){
+      root.innerHTML = '<div class="report-loading">Could not load this patient\'s report.</div>';
+      return;
+    }
+
+    document.title = `Report · ${patient.name} · ${settings.lab_name || 'Vitals Lab'}`;
+    root.innerHTML = renderReport(patient, settings || {});
+
+    document.getElementById('btn-print').addEventListener('click', ()=> window.print());
+    document.getElementById('btn-back').addEventListener('click', ()=> window.location.href='patients.html');
+  });
+
+  function renderReport(p, s){
+    const sections = Array.isArray(p.report_data) ? p.report_data : [];
+    let rowNo = 0;
+
+    const sectionsHtml = sections.length ? sections.map(sec => `
+      <div class="section-title">${util.escapeHtml(sec.section||'')}</div>
+      <table class="results">
+        <thead><tr><th>No.</th><th>Investigation</th><th>Observed Value</th><th>Unit</th><th>Reference Range</th></tr></thead>
+        <tbody>
+          ${(sec.rows||[]).map(r => `<tr>
+            <td>${++rowNo}</td>
+            <td>${util.escapeHtml(r.investigation||'')}</td>
+            <td><strong>${util.escapeHtml(r.value||'')}</strong></td>
+            <td>${util.escapeHtml(r.unit||'')}</td>
+            <td>${util.escapeHtml(r.range||'')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      ${sec.interpretation ? `<div class="interpretation"><strong>Interpretation:</strong> ${util.escapeHtml(sec.interpretation)}</div>` : ''}
+    `).join('') : `<div class="no-results">No test results have been entered for this patient yet. Go to Patients → Enter Results to add them.</div>`;
+
+    const labName = s.lab_name || 'Vitals Lab';
+    const initials = labName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+    return `
+      <div class="report-header">
+        <div class="brand">
+          <div class="brand-logo">${util.escapeHtml(initials)}</div>
+          <div>
+            <div class="lab-name">${util.escapeHtml(labName)}</div>
+            <div class="lab-address">${util.escapeHtml(s.address || '')}</div>
+          </div>
+        </div>
+        <div class="lab-contact">
+          ${s.phone ? `Phone: ${util.escapeHtml(s.phone)}<br>` : ''}
+          ${s.email ? `Email: ${util.escapeHtml(s.email)}` : ''}
+        </div>
+      </div>
+      <hr class="header-rule">
+
+      <table class="patient-info">
+        <tr>
+          <td class="label">Name</td><td class="value">${util.escapeHtml(p.name)}</td>
+          <td class="label">Age / Gender</td><td class="value">${p.age||'—'} Years / ${util.escapeHtml(p.gender||'—')}</td>
+        </tr>
+        <tr>
+          <td class="label">Referred By</td><td class="value">${util.escapeHtml(p.doctor||'Self')}</td>
+          <td class="label">Patient ID</td><td class="value">${util.escapeHtml(p.patient_code||p.id)}</td>
+        </tr>
+        <tr>
+          <td class="label">Collection Date</td><td class="value">${p.collection_date?util.fmtDate(p.collection_date):'—'}</td>
+          <td class="label">Report Date</td><td class="value">${p.report_date?util.fmtDate(p.report_date):'—'}</td>
+        </tr>
+      </table>
+
+      <div class="report-title">${util.escapeHtml(p.test_name || 'Lab Report')}</div>
+
+      ${sectionsHtml}
+
+      <div class="report-footer-strip">
+        <span>Patient ID: ${util.escapeHtml(p.patient_code||p.id)}</span>
+        <span>Collected: ${p.collection_date?util.fmtDate(p.collection_date):'—'}</span>
+        <span>Reported: ${p.report_date?util.fmtDate(p.report_date):'—'}</span>
+      </div>
+      <div class="report-footer">
+        <div class="disclaimer">
+          This report is generated based on values entered by laboratory staff and is intended for the
+          reference of the patient and referring physician only. Results should be correlated clinically.
+        </div>
+        <div class="signature">
+          <div class="sig-name">${util.escapeHtml(s.pathologist_name || 'Authorized Signatory')}</div>
+          <div class="sig-qual">${util.escapeHtml(s.pathologist_qualification || '')}</div>
+          ${s.pathologist_reg_no ? `<div class="sig-qual">Reg. No: ${util.escapeHtml(s.pathologist_reg_no)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+})();

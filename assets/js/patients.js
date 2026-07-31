@@ -22,7 +22,7 @@
       collectionDate: row.collection_date, reportDate: row.report_date, price: row.price,
       discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
       paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
-      photo: row.photo_url
+      photo: row.photo_url, reportData: row.report_data
     };
   }
   function toDb(p){
@@ -118,6 +118,83 @@
 
     document.getElementById('export-csv-btn').addEventListener('click', exportPatientsCSV);
     document.getElementById('print-btn').addEventListener('click', ()=> window.print());
+
+    document.getElementById('add-section-btn').addEventListener('click', ()=>{
+      document.getElementById('report-sections').insertAdjacentHTML('beforeend', sectionBlockHtml());
+    });
+    document.getElementById('report-save-btn').addEventListener('click', saveReportResults);
+    document.getElementById('report-sections').addEventListener('click', (e)=>{
+      const addRowBtn = e.target.closest('.add-row-btn');
+      const removeRowBtn = e.target.closest('.remove-row-btn');
+      const removeSectionBtn = e.target.closest('.remove-section-btn');
+      if(addRowBtn){
+        addRowBtn.closest('.report-section-block').querySelector('.report-rows').insertAdjacentHTML('beforeend', rowHtml());
+      }else if(removeRowBtn){
+        removeRowBtn.closest('.report-row').remove();
+      }else if(removeSectionBtn){
+        removeSectionBtn.closest('.report-section-block').remove();
+      }
+    });
+  }
+
+  // ---- Test Results entry (per patient, feeds the printed report) ----------
+  function rowHtml(r){
+    r = r || {};
+    return `<div class="report-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr auto;gap:8px;margin-bottom:6px;">
+      <input type="text" class="row-investigation" placeholder="Investigation" value="${util.escapeHtml(r.investigation||'')}">
+      <input type="text" class="row-value" placeholder="Value" value="${util.escapeHtml(r.value||'')}">
+      <input type="text" class="row-unit" placeholder="Unit" value="${util.escapeHtml(r.unit||'')}">
+      <input type="text" class="row-range" placeholder="Reference range" value="${util.escapeHtml(r.range||'')}">
+      <button type="button" class="btn btn-outline btn-sm remove-row-btn" title="Remove row">${icon('x')}</button>
+    </div>`;
+  }
+  function sectionBlockHtml(sec){
+    sec = sec || {};
+    const rows = (sec.rows && sec.rows.length ? sec.rows : [{}]).map(rowHtml).join('');
+    return `<div class="report-section-block" style="border:1px solid var(--border-color,#333);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+        <input type="text" class="section-title-input" placeholder="Section title (e.g. Erythrocytes)" value="${util.escapeHtml(sec.section||'')}" style="flex:1;">
+        <button type="button" class="btn btn-outline btn-sm remove-section-btn" title="Remove section">${icon('trash')}</button>
+      </div>
+      <div class="report-rows">${rows}</div>
+      <button type="button" class="btn btn-outline btn-sm add-row-btn"><span data-icon="plus"></span> Add Row</button>
+      <textarea class="section-interp-input" placeholder="Interpretation (optional)" style="width:100%;margin-top:10px;min-height:50px;">${util.escapeHtml(sec.interpretation||'')}</textarea>
+    </div>`;
+  }
+  function openReportModal(id){
+    const p = allPatients.find(x=>x.id===id);
+    if(!p) return;
+    document.getElementById('report-patient-id').value = id;
+    document.getElementById('report-modal-title').textContent = `Enter Test Results — ${p.name}`;
+    const sections = Array.isArray(p.reportData) && p.reportData.length ? p.reportData : [null];
+    document.getElementById('report-sections').innerHTML = sections.map(sectionBlockHtml).join('');
+    VLAB.openModal('report-modal');
+  }
+  function collectReportSections(){
+    return [...document.querySelectorAll('#report-sections .report-section-block')].map(block=>{
+      const section = block.querySelector('.section-title-input').value.trim();
+      const interpretation = block.querySelector('.section-interp-input').value.trim();
+      const rows = [...block.querySelectorAll('.report-row')].map(rowEl=>({
+        investigation: rowEl.querySelector('.row-investigation').value.trim(),
+        value: rowEl.querySelector('.row-value').value.trim(),
+        unit: rowEl.querySelector('.row-unit').value.trim(),
+        range: rowEl.querySelector('.row-range').value.trim()
+      })).filter(r=> r.investigation || r.value);
+      return { section, rows, interpretation };
+    }).filter(sec=> sec.section || sec.rows.length);
+  }
+  async function saveReportResults(){
+    const id = document.getElementById('report-patient-id').value;
+    const sections = collectReportSections();
+    const btn = document.getElementById('report-save-btn');
+    btn.disabled = true;
+    const saved = await SB.data.update('patients', id, { report_data: sections });
+    btn.disabled = false;
+    if(!saved){ VLAB.toast('Could not save results — please try again.', 'error'); return; }
+    const idx = allPatients.findIndex(x=>x.id===id);
+    if(idx>-1) allPatients[idx].reportData = saved.report_data;
+    VLAB.toast('Test results saved.', 'success');
+    VLAB.closeModal('report-modal');
   }
 
   function applyFilters(){
@@ -161,7 +238,8 @@
         <td><div class="table-actions">
           <button type="button" title="View" onclick="PatientsModule.view('${p.id}')">${icon('eye')}</button>
           <button type="button" title="Edit" onclick="PatientsModule.edit('${p.id}')">${icon('edit')}</button>
-          <button type="button" title="Print" onclick="PatientsModule.print('${p.id}')">${icon('printer')}</button>
+          <button type="button" title="Enter Test Results" onclick="PatientsModule.editReport('${p.id}')">${icon('flask')}</button>
+          <button type="button" title="View / Print Report" onclick="PatientsModule.openReport('${p.id}')">${icon('printer')}</button>
           <button type="button" title="Delete" class="danger" onclick="PatientsModule.remove('${p.id}')">${icon('trash')}</button>
         </div></td>
       </tr>`;
@@ -298,7 +376,7 @@
       allPatients.push(full);
       VLAB.toast(`Patient ${full.patientCode||full.id} added successfully.`, 'success');
     }
-    syncPaymentFromPatient(full);
+    await syncPaymentFromPatient(full);
     VLAB.closeModal('patient-modal');
     applyFilters();
   }
@@ -307,25 +385,16 @@
   // the single source of truth for that patient's receipt on the Payments &
   // Billing page. This keeps the two in sync instead of being two separate,
   // disconnected tables — one receipt per patient, upserted on every save.
-  function syncPaymentFromPatient(patient){
-    const payments = store.get(KEYS.payments, []);
-    const idx = payments.findIndex(p=>p.patientId===patient.id);
-    const paymentRecord = {
-      id: idx>-1 ? payments[idx].id : util.uid('RC', payments.length+1+Math.floor(Math.random()*900)),
-      patientId: patient.id,
-      patient: patient.name,
-      doctor: patient.doctor,
-      area: patient.area,
-      amount: patient.price,
-      discount: patient.discount,
-      finalAmount: patient.finalAmount,
-      method: patient.paymentMethod,
-      status: patient.paymentStatus,
+  async function syncPaymentFromPatient(patient){
+    const { data: existing } = await SB.client.from('payments').select('id').eq('patient_id', patient.id).maybeSingle();
+    const row = {
+      patient_id: patient.id, patient: patient.name, doctor: patient.doctor, area: patient.area,
+      amount: patient.price, discount: patient.discount, final_amount: patient.finalAmount,
+      method: patient.paymentMethod, status: patient.paymentStatus,
       date: patient.collectionDate || util.fmtDateInput(new Date())
     };
-    if(idx>-1) payments[idx] = paymentRecord;
-    else payments.push(paymentRecord);
-    store.set(KEYS.payments, payments);
+    if(existing) await SB.data.update('payments', existing.id, row);
+    else await SB.data.insert('payments', row);
   }
 
   window.PatientsModule = {
@@ -361,15 +430,16 @@
       VLAB.openModal('view-patient-modal');
     },
     edit(id){ openEditModal(id); },
-    print(id){ window.print(); },
+    openReport(id){ window.open(`report-print.html?id=${id}`, '_blank'); },
+    editReport(id){ openReportModal(id); },
     remove(id){
       const p = allPatients.find(x=>x.id===id);
       VLAB.confirmDelete(`Delete patient record ${p?p.patientCode:id}? This cannot be undone.`, async ()=>{
         const ok = await SB.data.remove('patients', id);
         if(!ok){ VLAB.toast('Could not delete patient — please try again.', 'error'); return; }
         allPatients = allPatients.filter(p=>p.id!==id);
-        const payments = store.get(KEYS.payments, []).filter(p=>p.patientId!==id);
-        store.set(KEYS.payments, payments);
+        // The patient's payment receipt is NOT deleted — the database keeps it
+        // for financial records, just unlinks it (payments.patient_id -> null).
         VLAB.toast(`Patient ${p?p.patientCode:id} deleted.`, 'success');
         applyFilters();
       });

@@ -6,11 +6,23 @@
   let all=[], filtered=[], currentPage=1;
   const PER_PAGE = 12;
 
+  function fromDb(row){
+    return { ...row, patientId: row.patient_id, finalAmount: row.final_amount, receiptCode: row.receipt_code };
+  }
+  function toDb(p){
+    return {
+      patient_id: p.patientId || null, patient: p.patient, doctor: p.doctor || null,
+      area: p.area || null, amount: p.amount, discount: p.discount, final_amount: p.finalAmount,
+      method: p.method || null, status: p.status, date: p.date
+    };
+  }
+
   document.addEventListener('DOMContentLoaded', async ()=>{
     const session = await VLAB.renderShell('payments');
     if(!session) return;
     VLAB.setPageTitle('Payments & Billing', 'Vitals Lab / Payments');
-    all = store.get(KEYS.payments, []);
+    const rows = await SB.data.list('payments', { order:'created_at', ascending:true });
+    all = rows.map(fromDb);
     renderStats();
     populateStatusFilter();
     populatePatientList();
@@ -18,8 +30,8 @@
     wire();
   });
 
-  function populatePatientList(){
-    const patients = store.get(KEYS.patients, []);
+  async function populatePatientList(){
+    const patients = await SB.data.list('patients', { order:'name', ascending:true });
     const list = document.getElementById('pay-patient-list');
     list.innerHTML = patients.map(p=>`<option value="${util.escapeHtml(p.name)}">`).join('');
   }
@@ -57,7 +69,7 @@
     document.getElementById('filter-method').addEventListener('change', applyFilters);
     document.getElementById('export-btn').addEventListener('click', ()=>{
       const headers=['Receipt No','Patient','Doctor','Area','Amount','Discount','Final Amount','Method','Status','Date'];
-      const rows = filtered.map(p=>[p.id,p.patient,p.doctor,p.area,p.amount,p.discount,p.finalAmount,p.method,p.status,p.date]);
+      const rows = filtered.map(p=>[p.receiptCode||p.id,p.patient,p.doctor,p.area,p.amount,p.discount,p.finalAmount,p.method,p.status,p.date]);
       VLAB.exportCSV('payments.csv', headers, rows);
     });
     document.getElementById('print-btn').addEventListener('click', ()=>window.print());
@@ -81,7 +93,7 @@
     document.getElementById('pay-final').value = Math.max(0, amount-discount);
   }
 
-  function savePayment(){
+  async function savePayment(){
     const patient = document.getElementById('pay-patient').value.trim();
     const amount = Number(document.getElementById('pay-amount').value)||0;
     if(!patient || !amount){ VLAB.toast('Patient name and amount are required.', 'error'); return; }
@@ -89,7 +101,6 @@
     const discount = Number(document.getElementById('pay-discount').value)||0;
     const existing = id ? all.find(p=>p.id===id) : null;
     const record = {
-      id: id || util.uid('RC', all.length+1+Math.floor(Math.random()*900)),
       patientId: existing ? existing.patientId : null,
       patient, doctor: document.getElementById('pay-doctor').value,
       area: document.getElementById('pay-area').value,
@@ -98,9 +109,18 @@
       status: document.getElementById('pay-status').value,
       date: document.getElementById('pay-date').value || util.fmtDateInput(new Date())
     };
-    if(id){ all[all.findIndex(x=>x.id===id)] = record; VLAB.toast('Payment updated.', 'success'); }
-    else{ all.push(record); VLAB.toast('Payment recorded.', 'success'); }
-    store.set(KEYS.payments, all);
+
+    const btn = document.getElementById('payment-save-btn');
+    btn.disabled = true;
+    const saved = id
+      ? await SB.data.update('payments', id, toDb(record))
+      : await SB.data.insert('payments', toDb(record));
+    btn.disabled = false;
+
+    if(!saved){ VLAB.toast('Could not save payment — please try again.', 'error'); return; }
+    const full = fromDb(saved);
+    if(id){ all[all.findIndex(x=>x.id===id)] = full; VLAB.toast('Payment updated.', 'success'); }
+    else{ all.push(full); VLAB.toast('Payment recorded.', 'success'); }
     VLAB.closeModal('payment-modal');
     renderStats();
     applyFilters();
@@ -111,7 +131,7 @@
     const status = document.getElementById('filter-status').value;
     const method = document.getElementById('filter-method').value;
     filtered = all.filter(p=>{
-      const matchesQ = !q || [p.patient,p.doctor,p.id].some(v=>String(v).toLowerCase().includes(q));
+      const matchesQ = !q || [p.patient,p.doctor,p.receiptCode].some(v=>String(v).toLowerCase().includes(q));
       return matchesQ && (!status || p.status===status) && (!method || p.method===method);
     });
     currentPage=1; render();
@@ -122,7 +142,7 @@
     document.getElementById('payments-table-body').innerHTML = items.map(p=>{
       const st = util.statusMeta(PAYMENT_STATUSES, p.status);
       return `<tr>
-        <td class="mono">${p.id}</td>
+        <td class="mono">${p.receiptCode||p.id}</td>
         <td class="cell-name">${util.escapeHtml(p.patient)}</td>
         <td>${util.escapeHtml(p.doctor)}</td>
         <td>${util.escapeHtml(p.area)}</td>
@@ -147,14 +167,14 @@
   window.PaymentsModule = {
     receipt(id){
       const p = all.find(x=>x.id===id);
-      VLAB.toast(`Receipt ${p.id} for ${p.patient} generated.`, 'success', 'Receipt Ready');
+      VLAB.toast(`Receipt ${p.receiptCode||p.id} for ${p.patient} generated.`, 'success', 'Receipt Ready');
     },
     pdf(id){
       VLAB.toast('PDF export is a demo action — connect a backend to enable real downloads.', 'info');
     },
     edit(id){
       const p = all.find(x=>x.id===id); if(!p) return;
-      document.getElementById('payment-modal-title').textContent = `Edit Payment — ${p.id}`;
+      document.getElementById('payment-modal-title').textContent = `Edit Payment — ${p.receiptCode||p.id}`;
       document.getElementById('pay-id').value = p.id;
       document.getElementById('pay-patient').value = p.patient;
       document.getElementById('pay-doctor').value = p.doctor||'';
@@ -175,9 +195,10 @@
       const msg = p && p.patientId
         ? 'This receipt is linked to a patient record. Deleting it here only removes the receipt, not the patient. Continue?'
         : 'Delete this payment record?';
-      VLAB.confirmDelete(msg, ()=>{
+      VLAB.confirmDelete(msg, async ()=>{
+        const ok = await SB.data.remove('payments', id);
+        if(!ok){ VLAB.toast('Could not delete payment — please try again.', 'error'); return; }
         all = all.filter(x=>x.id!==id);
-        store.set(KEYS.payments, all);
         VLAB.toast('Payment deleted.', 'success');
         renderStats();
         applyFilters();

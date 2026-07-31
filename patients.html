@@ -147,6 +147,27 @@
   </div>
 </div>
 
+<!-- ENTER / EDIT TEST RESULTS MODAL -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-box modal-lg">
+    <div class="modal-head">
+      <h3 id="report-modal-title">Enter Test Results</h3>
+      <button class="modal-close" onclick="VLAB.closeModal('report-modal')"><span data-icon="x"></span></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="report-patient-id">
+      <p class="text-muted" style="margin-top:0;">Group results the same way they'll print — e.g. one section per category
+        like "Erythrocytes" or "Liver Function Test", with a row for each investigation.</p>
+      <div id="report-sections"></div>
+      <button type="button" class="btn btn-outline" id="add-section-btn"><span data-icon="plus"></span> Add Section</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="VLAB.closeModal('report-modal')">Cancel</button>
+      <button class="btn btn-primary" id="report-save-btn"><span data-icon="save"></span> Save Results</button>
+    </div>
+  </div>
+</div>
+
 <script src="assets/vendor/supabase/supabase.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/icons.js"></script>
