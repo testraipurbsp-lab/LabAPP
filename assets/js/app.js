@@ -464,6 +464,7 @@ const VLAB = (() => {
       {href:'patients.html', icon:'activity', label:'Patients', key:'patients'},
       {href:'doctors.html', icon:'stethoscope', label:'Doctors', key:'doctors'},
       {href:'areas.html', icon:'map-pin', label:'Area Management', key:'areas'},
+      {href:'tests.html', icon:'flask', label:'Tests', key:'tests'},
     ]},
     {section:'Finance', items:[
       {href:'payments.html', icon:'wallet', label:'Payments / Billing', key:'payments'},

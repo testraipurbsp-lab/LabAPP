@@ -99,7 +99,15 @@
             <div class="field-group"><label>Doctor Name *</label><select id="p-doctor" required></select></div>
             <div class="field-group"><label>Test Category</label><select id="p-testcategory"></select></div>
             <div class="field-group"><label>Test Name *</label><select id="p-testname" required></select></div>
-            <div class="field-group"><label>Sample Type</label><select id="p-sampletype"></select></div>
+            <div class="field-group"><label>Unit</label><input type="text" id="p-unit" placeholder="Auto-fills from test, editable"></div>
+            <div class="field-group">
+              <label>Sample Type</label>
+              <select id="p-sampletype"></select>
+              <div id="p-sampletype-new-wrap" style="display:none;margin-top:6px;gap:6px;" class="flex-between">
+                <input type="text" id="p-sampletype-new" placeholder="Type new sample type…" style="flex:1;">
+                <button type="button" class="btn btn-outline btn-sm" id="p-sampletype-new-add">Add</button>
+              </div>
+            </div>
             <div class="field-group"><label>Collection Date</label><input type="date" id="p-collectiondate"></div>
             <div class="field-group"><label>Report Date</label><input type="date" id="p-reportdate"></div>
             <div class="field-group"><label>Report Status</label><select id="p-reportstatus"></select></div>

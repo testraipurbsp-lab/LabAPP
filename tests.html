@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tests · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div><h2 style="font-family:var(--font-display);font-size:18px;">Tests</h2><p class="text-muted" style="font-size:12.5px;">Test catalog — categories, names, units, and pricing</p></div>
+        <div class="page-actions"><button class="btn btn-primary" id="add-test-btn"><span data-icon="plus"></span> Add Test</button></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search test name or category…"></div>
+          <select id="filter-category"><option value="">All Categories</option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Test Name</th><th>Category</th><th>Unit</th><th>Sample Type</th><th>Normal Range</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="tests-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="tests-pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="test-modal">
+  <div class="modal-box modal-sm">
+    <div class="modal-head"><h3 id="test-modal-title">Add Test</h3><button class="modal-close" onclick="VLAB.closeModal('test-modal')"><span data-icon="x"></span></button></div>
+    <div class="modal-body">
+      <form id="test-form">
+        <input type="hidden" id="t-id">
+        <div class="field-group"><label>Test Name *</label><input type="text" id="t-name" required placeholder="e.g. Blood Sugar PP"></div>
+        <div class="field-group"><label>Category</label><input type="text" id="t-category" list="t-category-list" placeholder="e.g. Immunology, Haematology"></div>
+        <datalist id="t-category-list"></datalist>
+        <div class="field-group"><label>Unit</label><input type="text" id="t-unit" placeholder="e.g. mg/dL, g/dL, %"></div>
+        <div class="field-group"><label>Sample Type</label><input type="text" id="t-sampletype" placeholder="e.g. Serum, EDTA Whole Blood"></div>
+        <div class="field-group"><label>Normal Range</label><input type="text" id="t-range" placeholder="e.g. 70-140"></div>
+        <div class="field-group"><label>Price (₹)</label><input type="number" id="t-price" min="0"></div>
+        <div class="field-group"><label>Report Time</label><input type="text" id="t-reporttime" placeholder="e.g. Same day, 24 hrs"></div>
+        <div class="field-group"><label>Status</label><select id="t-status"><option>Active</option><option>Inactive</option></select></div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="VLAB.closeModal('test-modal')">Cancel</button>
+      <button class="btn btn-primary" id="test-save-btn"><span data-icon="save"></span> Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/tests.js"></script>
+</body>
+</html>

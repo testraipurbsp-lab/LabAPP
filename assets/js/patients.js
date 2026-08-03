@@ -6,6 +6,7 @@
   let allPatients = [];
   let filtered = [];
   let currentPage = 1;
+  let testCatalog = [];
   const PER_PAGE = 10;
 
   // Supabase's `patients` table uses snake_case columns; the rest of this
@@ -22,7 +23,7 @@
       collectionDate: row.collection_date, reportDate: row.report_date, price: row.price,
       discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
       paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
-      photo: row.photo_url, reportData: row.report_data
+      photo: row.photo_url, reportData: row.report_data, unit: row.unit
     };
   }
   function toDb(p){
@@ -37,7 +38,8 @@
       collection_date: p.collectionDate || null, report_date: p.reportDate || null,
       price: p.price, discount: p.discount, final_amount: p.finalAmount,
       payment_status: p.paymentStatus, payment_method: p.paymentMethod || null,
-      report_status: p.reportStatus, remarks: p.remarks || null, photo_url: p.photo || null
+      report_status: p.reportStatus, remarks: p.remarks || null, photo_url: p.photo || null,
+      unit: p.unit || null
     };
   }
 
@@ -76,24 +78,70 @@
   async function populateFormSelects(){
     const areas = (await SB.data.list('areas', { order:'name', ascending:true })).filter(a=>a.status==='Active');
     const doctors = (await SB.data.list('doctors', { order:'name', ascending:true })).filter(d=>d.status==='Active');
-    const tests = store.get(KEYS.tests, []);
+    testCatalog = (await SB.data.list('tests', { order:'name', ascending:true })).filter(t=>t.status==='Active');
 
     fillSelect('p-area', areas.map(a=>a.name));
     fillSelect('p-doctor', doctors.map(d=>d.name));
-    fillSelect('p-testcategory', [...new Set(pools.testCategories)]);
-    fillSelect('p-testname', [...new Set(tests.map(t=>t.name))]);
-    fillSelect('p-sampletype', pools.sampleTypes);
+    fillSelect('p-testcategory', ['', ...new Set(testCatalog.map(t=>t.category).filter(Boolean))]);
+    fillSelect('p-testname', testCatalog.map(t=>t.name));
+    const sampleTypeSuggestions = [...new Set([
+      ...pools.sampleTypes,
+      ...testCatalog.map(t=>t.sample_type).filter(Boolean),
+      ...allPatients.map(p=>p.sampleType).filter(Boolean)
+    ])];
+    fillSelect('p-sampletype', [...sampleTypeSuggestions, '+ Add New Sample Type…'], [...sampleTypeSuggestions, '__add_new__']);
     fillSelect('p-reportstatus', CAP_STATUSES.map(s=>s.label), CAP_STATUSES.map(s=>s.key));
     fillSelect('p-paymentstatus', PAYMENT_STATUSES.map(s=>s.label), PAYMENT_STATUSES.map(s=>s.key));
     fillSelect('p-paymentmethod', pools.paymentMethods);
   }
+  function refilterTestNames(){
+    const category = document.getElementById('p-testcategory').value;
+    const matches = category ? testCatalog.filter(t=>t.category===category) : testCatalog;
+    fillSelect('p-testname', matches.map(t=>t.name));
+    onTestNameChange();
+  }
+  function onTestNameChange(){
+    const test = testCatalog.find(t=>t.name===document.getElementById('p-testname').value);
+    if(!test) return;
+    if(test.category) document.getElementById('p-testcategory').value = test.category;
+    if(test.sample_type) document.getElementById('p-sampletype').value = test.sample_type;
+    if(test.unit) document.getElementById('p-unit').value = test.unit;
+    if(test.price!=null) document.getElementById('p-price').value = test.price;
+  }
   function fillSelect(id, labels, values){
     const el = document.getElementById(id);
-    el.innerHTML = labels.map((l,i)=>`<option value="${values?values[i]:l}">${l}</option>`).join('');
+    el.innerHTML = labels.map((l,i)=>`<option value="${values?values[i]:l}">${l||'All Categories'}</option>`).join('');
   }
 
   function wireEvents(){
     document.getElementById('search-input').addEventListener('input', util.debounce(applyFilters, 250));
+    document.getElementById('p-testcategory').addEventListener('change', refilterTestNames);
+    document.getElementById('p-testname').addEventListener('change', onTestNameChange);
+    document.getElementById('p-sampletype').addEventListener('change', (e)=>{
+      const wrap = document.getElementById('p-sampletype-new-wrap');
+      if(e.target.value === '__add_new__'){
+        wrap.style.display = 'flex';
+        document.getElementById('p-sampletype-new').value = '';
+        document.getElementById('p-sampletype-new').focus();
+      }else{
+        wrap.style.display = 'none';
+      }
+    });
+    const addNewSampleType = ()=>{
+      const val = document.getElementById('p-sampletype-new').value.trim();
+      if(!val) return;
+      const sel = document.getElementById('p-sampletype');
+      const addNewOpt = sel.querySelector('option[value="__add_new__"]');
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      sel.insertBefore(opt, addNewOpt);
+      sel.value = val;
+      document.getElementById('p-sampletype-new-wrap').style.display = 'none';
+    };
+    document.getElementById('p-sampletype-new-add').addEventListener('click', addNewSampleType);
+    document.getElementById('p-sampletype-new').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); addNewSampleType(); }
+    });
     ['filter-area','filter-doctor','filter-gender','filter-payment','filter-report'].forEach(id=>{
       document.getElementById(id).addEventListener('change', applyFilters);
     });
@@ -299,6 +347,7 @@
     document.getElementById('p-testcategory').value = p.testCategory;
     document.getElementById('p-testname').value = p.testName;
     document.getElementById('p-sampletype').value = p.sampleType;
+    document.getElementById('p-unit').value = p.unit||'';
     document.getElementById('p-collectiondate').value = p.collectionDate;
     document.getElementById('p-reportdate').value = p.reportDate;
     document.getElementById('p-reportstatus').value = p.reportStatus;
@@ -319,6 +368,10 @@
     const testName = document.getElementById('p-testname').value;
     if(!name || !phone || !area || !doctor || !testName){
       VLAB.toast('Please fill all required fields marked with *.', 'error');
+      return;
+    }
+    if(document.getElementById('p-sampletype').value === '__add_new__'){
+      VLAB.toast('Type the new sample type and click "Add" before saving.', 'error');
       return;
     }
     const id = document.getElementById('p-id').value;
@@ -342,6 +395,7 @@
       reference: document.getElementById('p-reference').value,
       testCategory: document.getElementById('p-testcategory').value,
       testName, sampleType: document.getElementById('p-sampletype').value,
+      unit: document.getElementById('p-unit').value.trim(),
       collectionDate: document.getElementById('p-collectiondate').value,
       reportDate: document.getElementById('p-reportdate').value,
       price, discount, finalAmount: Math.max(0,price-discount),

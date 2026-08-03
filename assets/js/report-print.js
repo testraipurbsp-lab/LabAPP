@@ -54,56 +54,64 @@
 
     const labName = s.lab_name || 'Vitals Lab';
     const initials = labName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    // Placeholder quality badges — replace with real certification logos
+    // once confirmed (e.g. NABL, ISO 15189) via settings or a dedicated field.
+    const badges = ['ACCURATE RESULTS', 'QUALITY ASSURED', 'TIMELY REPORTS'];
 
     return `
-      <div class="report-header">
-        <div class="brand">
-          <div class="brand-logo">${util.escapeHtml(initials)}</div>
-          <div>
-            <div class="lab-name">${util.escapeHtml(labName)}</div>
-            <div class="lab-address">${util.escapeHtml(s.address || '')}</div>
+      <div class="report-banner">
+        <div class="banner-ribbon"></div>
+        <div class="banner-logo-circle">${util.escapeHtml(initials)}</div>
+        <div class="banner-lab-name">${util.escapeHtml(labName)}</div>
+        <div class="banner-tagline">Pathology &amp; Diagnostic Laboratory</div>
+        <div class="banner-badges">${badges.map(b=>`<span class="badge-chip">${util.escapeHtml(b)}</span>`).join('')}</div>
+      </div>
+      <div class="banner-address-bar">${util.escapeHtml(s.address || '')}</div>
+      ${(s.phone||s.email) ? `<div class="lab-contact-line">${[s.phone,s.email].filter(Boolean).map(util.escapeHtml).join(' &nbsp;|&nbsp; ')}</div>` : ''}
+
+      <div class="report-body">
+        <table class="patient-info">
+          <tr>
+            <td class="label">Name</td><td class="value">${util.escapeHtml(p.name)}</td>
+            <td class="label">Age / Gender</td><td class="value">${p.age||'—'} Years / ${util.escapeHtml(p.gender||'—')}</td>
+          </tr>
+          <tr>
+            <td class="label">Referred By</td><td class="value">${util.escapeHtml(p.doctor||'Self')}</td>
+            <td class="label">Patient ID</td><td class="value">${util.escapeHtml(p.patient_code||p.id)}</td>
+          </tr>
+          <tr>
+            <td class="label">Collection Date</td><td class="value">${p.collection_date?util.fmtDate(p.collection_date):'—'}</td>
+            <td class="label">Report Date</td><td class="value">${p.report_date?util.fmtDate(p.report_date):'—'}</td>
+          </tr>
+        </table>
+
+        <div class="report-title">${util.escapeHtml(p.test_name || 'Lab Report')}</div>
+
+        ${sectionsHtml}
+
+        <div class="report-footer-strip">
+          <span>Patient ID: ${util.escapeHtml(p.patient_code||p.id)}</span>
+          <span>Collected: ${p.collection_date?util.fmtDate(p.collection_date):'—'}</span>
+          <span>Reported: ${p.report_date?util.fmtDate(p.report_date):'—'}</span>
+        </div>
+        <div class="report-footer">
+          <div class="disclaimer">
+            This report is generated based on values entered by laboratory staff and is intended for the
+            reference of the patient and referring physician only. Results should be correlated clinically.
+          </div>
+          <div class="signature">
+            <div class="sig-name">${util.escapeHtml(s.pathologist_name || 'Authorized Signatory')}</div>
+            <div class="sig-qual">${util.escapeHtml(s.pathologist_qualification || '')}</div>
+            ${s.pathologist_reg_no ? `<div class="sig-qual">Reg. No: ${util.escapeHtml(s.pathologist_reg_no)}</div>` : ''}
           </div>
         </div>
-        <div class="lab-contact">
-          ${s.phone ? `Phone: ${util.escapeHtml(s.phone)}<br>` : ''}
-          ${s.email ? `Email: ${util.escapeHtml(s.email)}` : ''}
-        </div>
       </div>
-      <hr class="header-rule">
 
-      <table class="patient-info">
-        <tr>
-          <td class="label">Name</td><td class="value">${util.escapeHtml(p.name)}</td>
-          <td class="label">Age / Gender</td><td class="value">${p.age||'—'} Years / ${util.escapeHtml(p.gender||'—')}</td>
-        </tr>
-        <tr>
-          <td class="label">Referred By</td><td class="value">${util.escapeHtml(p.doctor||'Self')}</td>
-          <td class="label">Patient ID</td><td class="value">${util.escapeHtml(p.patient_code||p.id)}</td>
-        </tr>
-        <tr>
-          <td class="label">Collection Date</td><td class="value">${p.collection_date?util.fmtDate(p.collection_date):'—'}</td>
-          <td class="label">Report Date</td><td class="value">${p.report_date?util.fmtDate(p.report_date):'—'}</td>
-        </tr>
-      </table>
-
-      <div class="report-title">${util.escapeHtml(p.test_name || 'Lab Report')}</div>
-
-      ${sectionsHtml}
-
-      <div class="report-footer-strip">
-        <span>Patient ID: ${util.escapeHtml(p.patient_code||p.id)}</span>
-        <span>Collected: ${p.collection_date?util.fmtDate(p.collection_date):'—'}</span>
-        <span>Reported: ${p.report_date?util.fmtDate(p.report_date):'—'}</span>
-      </div>
-      <div class="report-footer">
-        <div class="disclaimer">
-          This report is generated based on values entered by laboratory staff and is intended for the
-          reference of the patient and referring physician only. Results should be correlated clinically.
-        </div>
-        <div class="signature">
-          <div class="sig-name">${util.escapeHtml(s.pathologist_name || 'Authorized Signatory')}</div>
-          <div class="sig-qual">${util.escapeHtml(s.pathologist_qualification || '')}</div>
-          ${s.pathologist_reg_no ? `<div class="sig-qual">Reg. No: ${util.escapeHtml(s.pathologist_reg_no)}</div>` : ''}
+      <div class="report-footer-ribbon">
+        <div class="footer-ribbon-bg"></div>
+        <div class="footer-ribbon-content">
+          ${s.phone ? `<span>${util.escapeHtml(s.phone)}</span>` : ''}
+          ${s.email ? `<span>${util.escapeHtml(s.email)}</span>` : ''}
         </div>
       </div>
     `;
