@@ -30,6 +30,7 @@ body{
   box-shadow:0 2px 16px rgba(0,0,0,.10);
   border-radius:4px;
   overflow:hidden;
+  position:relative;
 }
 .report-body{ padding:20px 34px 0; }
 .report-loading{ text-align:center; padding:60px 0; color:#888; }
@@ -121,6 +122,43 @@ table.results tbody tr:last-child td{ border-bottom:none; }
 
 .no-results{ color:#888; font-style:italic; font-size:12.5px; padding:10px 0; }
 
+/* ---- Compact header (Mix mode): plain text, no ribbon/logo/badges ---- */
+.report-header-compact{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:16px 34px 10px; border-bottom:2px solid #1c4e9c;
+}
+.report-header-compact .lab-name{
+  font-family:'Sora',sans-serif; font-weight:700; font-size:16px; color:#1c4e9c;
+}
+.report-header-compact .lab-meta{ font-size:10.5px; color:#666; text-align:right; }
+
+/* ---- Report status: badge, watermark, pending-review note ---- */
+.status-badge{
+  display:inline-block; margin:8px 0 4px; padding:4px 12px; border-radius:12px;
+  font-size:10.5px; font-weight:700; letter-spacing:.3px;
+}
+.status-badge.preliminary{ background:#fff3cd; color:#8a6416; border:1px solid #f0d78c; }
+.status-badge.final{ background:#e3f6e8; color:#1c7a3e; border:1px solid #a9e2bb; }
+.status-badge.cancelled{ background:#fde3e3; color:#a31d1d; border:1px solid #f3b3b3; }
+
+.watermark{
+  position:absolute; top:48%; left:50%; transform:translate(-50%,-50%) rotate(-28deg);
+  font-family:'Sora',sans-serif; font-weight:800; font-size:52px; letter-spacing:2px;
+  color:rgba(200,40,40,.13); pointer-events:none; z-index:5; white-space:nowrap;
+}
+.watermark.preliminary{ color:rgba(28,78,156,.12); }
+
+.pending-review-note{
+  font-size:11px; color:#8a6416; background:#fff8e6; border:1px solid #f0d78c;
+  border-radius:4px; padding:8px 12px; text-align:center;
+}
+.screen-status-banner{
+  max-width:820px; margin:0 auto 10px; padding:9px 14px; border-radius:6px;
+  font-size:12.5px; font-weight:600; text-align:center;
+}
+.screen-status-banner.preliminary{ background:#fff3cd; color:#8a6416; }
+.screen-status-banner.cancelled{ background:#fde3e3; color:#a31d1d; }
+
 /* ---- Footer / signature ---- */
 .report-footer-strip{
   display:flex; justify-content:space-between; font-size:10px; color:#666;
@@ -151,7 +189,10 @@ table.results tbody tr:last-child td{ border-bottom:none; }
 
 /* ---- Toolbar (screen only) ---- */
 .report-toolbar{
-  max-width:820px; margin:0 auto; display:flex; gap:10px; justify-content:center;
+  max-width:820px; margin:0 auto; display:flex; gap:14px; justify-content:center; align-items:center; flex-wrap:wrap;
+}
+.header-mode-option{
+  font-family:'Inter',sans-serif; font-size:12.5px; color:#33383f; display:flex; align-items:center; gap:5px; cursor:pointer;
 }
 .report-toolbar button{
   font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
@@ -166,4 +207,4 @@ table.results tbody tr:last-child td{ border-bottom:none; }
   .report-page{ box-shadow:none; border-radius:0; max-width:none; }
   .report-body{ padding:16px 12mm 0; }
   .no-print{ display:none !important; }
-}
+}                   

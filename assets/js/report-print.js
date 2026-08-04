@@ -25,13 +25,40 @@
     }
 
     document.title = `Report · ${patient.name} · ${settings.lab_name || 'Vitals Lab'}`;
-    root.innerHTML = renderReport(patient, settings || {});
+    root.innerHTML = renderReport(patient, settings || {}, 'full');
+    renderStatusBanner(patient);
+
+    document.querySelectorAll('input[name="header-mode"]').forEach(radio=>{
+      radio.addEventListener('change', ()=>{
+        root.innerHTML = renderReport(patient, settings || {}, radio.value);
+      });
+    });
 
     document.getElementById('btn-print').addEventListener('click', ()=> window.print());
     document.getElementById('btn-back').addEventListener('click', ()=> window.location.href='patients.html');
   });
 
-  function renderReport(p, s){
+  const STATUS_INFO = {
+    collected:  { label:'Collected',    badge:'preliminary' },
+    processing: { label:'Processing',   badge:'preliminary' },
+    reviewed:   { label:'Under Review', badge:'preliminary' },
+    completed:  { label:'Report Ready', badge:'final' },
+    cancelled:  { label:'Cancelled',    badge:'cancelled' }
+  };
+
+  function renderStatusBanner(p){
+    const info = STATUS_INFO[p.report_status] || STATUS_INFO.collected;
+    if(info.badge === 'final') return; // finalized reports need no on-screen reminder
+    const banner = document.createElement('div');
+    banner.className = `no-print screen-status-banner ${info.badge}`;
+    banner.textContent = info.badge === 'cancelled'
+      ? 'This test was cancelled. The report below is shown for reference only.'
+      : `This report is still "${info.label}" — it will print with a preliminary watermark and no signature until its status is set to "Report Ready" on the Patients page.`;
+    document.getElementById('report-root').insertAdjacentElement('beforebegin', banner);
+  }
+
+  function renderReport(p, s, headerMode){
+    headerMode = headerMode || 'full';
     const sections = Array.isArray(p.report_data) ? p.report_data : [];
     let rowNo = 0;
 
@@ -58,14 +85,27 @@
     // once confirmed (e.g. NABL, ISO 15189) via settings or a dedicated field.
     const badges = ['ACCURATE RESULTS', 'QUALITY ASSURED', 'TIMELY REPORTS'];
 
-    return `
+    const statusInfo = STATUS_INFO[p.report_status] || STATUS_INFO.collected;
+    const isFinal = statusInfo.badge === 'final';
+    const isCancelled = statusInfo.badge === 'cancelled';
+    const watermarkText = isCancelled ? 'CANCELLED' : (!isFinal ? 'PRELIMINARY' : '');
+
+    const headerHtml = headerMode === 'none' ? '' : headerMode === 'mix' ? `
+      <div class="report-header-compact">
+        <div class="lab-name">${util.escapeHtml(labName)}</div>
+        <div class="lab-meta">${util.escapeHtml(s.address||'')}${(s.phone||s.email)?'<br>'+[s.phone,s.email].filter(Boolean).map(util.escapeHtml).join(' | '):''}</div>
+      </div>` : `
       <div class="report-banner">
         <div class="banner-ribbon"></div>
         <div class="banner-logo-circle">${util.escapeHtml(initials)}</div>
         <div class="banner-lab-name">${util.escapeHtml(labName)}</div>
         <div class="banner-tagline">Pathology &amp; Diagnostic Laboratory</div>
         <div class="banner-badges">${badges.map(b=>`<span class="badge-chip">${util.escapeHtml(b)}</span>`).join('')}</div>
-      </div>
+      </div>`;
+
+    return `
+      ${watermarkText ? `<div class="watermark ${isCancelled?'':'preliminary'}">${watermarkText}</div>` : ''}
+      ${headerHtml}
       <div class="banner-address-bar">${util.escapeHtml(s.address || '')}</div>
       ${(s.phone||s.email) ? `<div class="lab-contact-line">${[s.phone,s.email].filter(Boolean).map(util.escapeHtml).join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
@@ -86,6 +126,7 @@
         </table>
 
         <div class="report-title">${util.escapeHtml(p.test_name || 'Lab Report')}</div>
+        <div style="text-align:center;"><span class="status-badge ${statusInfo.badge}">${util.escapeHtml(statusInfo.label)}</span></div>
 
         ${sectionsHtml}
 
@@ -99,11 +140,13 @@
             This report is generated based on values entered by laboratory staff and is intended for the
             reference of the patient and referring physician only. Results should be correlated clinically.
           </div>
+          ${isFinal ? `
           <div class="signature">
             <div class="sig-name">${util.escapeHtml(s.pathologist_name || 'Authorized Signatory')}</div>
             <div class="sig-qual">${util.escapeHtml(s.pathologist_qualification || '')}</div>
             ${s.pathologist_reg_no ? `<div class="sig-qual">Reg. No: ${util.escapeHtml(s.pathologist_reg_no)}</div>` : ''}
-          </div>
+          </div>` : `
+          <div class="pending-review-note">Pending final review<br>Not signed</div>`}
         </div>
       </div>
 

@@ -170,6 +170,15 @@
     document.getElementById('add-section-btn').addEventListener('click', ()=>{
       document.getElementById('report-sections').insertAdjacentHTML('beforeend', sectionBlockHtml());
     });
+    document.getElementById('add-section-from-category-btn').addEventListener('click', ()=>{
+      const category = document.getElementById('report-category-select').value;
+      if(!category){ VLAB.toast('Pick a test category first.', 'error'); return; }
+      const matches = testCatalog.filter(t=>t.category===category);
+      const rows = matches.map(t=>({ investigation:t.name, value:'', unit:t.unit||'', range:t.normal_range||'' }));
+      document.getElementById('report-sections').insertAdjacentHTML('beforeend',
+        sectionBlockHtml({ section:category, rows }));
+      document.getElementById('report-category-select').value = '';
+    });
     document.getElementById('report-save-btn').addEventListener('click', saveReportResults);
     document.getElementById('report-sections').addEventListener('click', (e)=>{
       const addRowBtn = e.target.closest('.add-row-btn');
@@ -216,6 +225,10 @@
     document.getElementById('report-modal-title').textContent = `Enter Test Results — ${p.name}`;
     const sections = Array.isArray(p.reportData) && p.reportData.length ? p.reportData : [null];
     document.getElementById('report-sections').innerHTML = sections.map(sectionBlockHtml).join('');
+    const categories = [...new Set(testCatalog.map(t=>t.category).filter(Boolean))].sort();
+    document.getElementById('report-category-select').innerHTML =
+      '<option value="">Add from Test Category…</option>' +
+      categories.map(c=>`<option value="${util.escapeHtml(c)}">${util.escapeHtml(c)}</option>`).join('');
     VLAB.openModal('report-modal');
   }
   function collectReportSections(){

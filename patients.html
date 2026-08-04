@@ -167,7 +167,13 @@
       <p class="text-muted" style="margin-top:0;">Group results the same way they'll print — e.g. one section per category
         like "Erythrocytes" or "Liver Function Test", with a row for each investigation.</p>
       <div id="report-sections"></div>
-      <button type="button" class="btn btn-outline" id="add-section-btn"><span data-icon="plus"></span> Add Section</button>
+      <div class="flex-between" style="gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;flex:1;min-width:220px;">
+          <select id="report-category-select" style="flex:1;"><option value="">Add from Test Category…</option></select>
+          <button type="button" class="btn btn-outline" id="add-section-from-category-btn"><span data-icon="flask"></span> Add</button>
+        </div>
+        <button type="button" class="btn btn-outline" id="add-section-btn"><span data-icon="plus"></span> Blank Section</button>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="VLAB.closeModal('report-modal')">Cancel</button>
