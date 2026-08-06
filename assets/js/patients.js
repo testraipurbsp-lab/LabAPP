@@ -23,7 +23,7 @@
       collectionDate: row.collection_date, reportDate: row.report_date, price: row.price,
       discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
       paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
-      photo: row.photo_url, reportData: row.report_data, unit: row.unit
+      photo: row.photo_url, reportData: row.report_data, unit: row.unit, shareToken: row.share_token
     };
   }
   function toDb(p){
@@ -170,6 +170,12 @@
     document.getElementById('add-section-btn').addEventListener('click', ()=>{
       document.getElementById('report-sections').insertAdjacentHTML('beforeend', sectionBlockHtml());
     });
+    document.getElementById('share-copy-btn').addEventListener('click', async ()=>{
+      const input = document.getElementById('share-link-input');
+      input.select();
+      try{ await navigator.clipboard.writeText(input.value); VLAB.toast('Link copied.', 'success'); }
+      catch{ document.execCommand('copy'); VLAB.toast('Link copied.', 'success'); }
+    });
     document.getElementById('add-section-from-category-btn').addEventListener('click', ()=>{
       const category = document.getElementById('report-category-select').value;
       if(!category){ VLAB.toast('Pick a test category first.', 'error'); return; }
@@ -301,6 +307,7 @@
           <button type="button" title="Edit" onclick="PatientsModule.edit('${p.id}')">${icon('edit')}</button>
           <button type="button" title="Enter Test Results" onclick="PatientsModule.editReport('${p.id}')">${icon('flask')}</button>
           <button type="button" title="View / Print Report" onclick="PatientsModule.openReport('${p.id}')">${icon('printer')}</button>
+          <button type="button" title="Share Report" onclick="PatientsModule.shareReport('${p.id}')">${icon('share')}</button>
           <button type="button" title="Delete" class="danger" onclick="PatientsModule.remove('${p.id}')">${icon('trash')}</button>
         </div></td>
       </tr>`;
@@ -499,6 +506,20 @@
     edit(id){ openEditModal(id); },
     openReport(id){ window.open(`report-print.html?id=${id}`, '_blank'); },
     editReport(id){ openReportModal(id); },
+    shareReport(id){
+      const p = allPatients.find(x=>x.id===id);
+      if(!p) return;
+      if(!p.shareToken){
+        VLAB.toast('This patient has no share link yet — run the 008_public_report_share.sql migration, or edit and re-save this patient.', 'error');
+        return;
+      }
+      const link = `${window.location.origin}/report-print.html?token=${p.shareToken}`;
+      document.getElementById('share-link-input').value = link;
+      const message = encodeURIComponent(`Hi ${p.name}, here's your lab report from Vitals Lab: ${link}`);
+      document.getElementById('share-whatsapp-link').href = `https://wa.me/${p.phone?p.phone.replace(/\D/g,''):''}?text=${message}`;
+      document.getElementById('share-email-link').href = `mailto:?subject=${encodeURIComponent('Your Lab Report - Vitals Lab')}&body=${message}`;
+      VLAB.openModal('share-modal');
+    },
     remove(id){
       const p = allPatients.find(x=>x.id===id);
       VLAB.confirmDelete(`Delete patient record ${p?p.patientCode:id}? This cannot be undone.`, async ()=>{

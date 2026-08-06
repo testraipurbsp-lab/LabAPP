@@ -7,35 +7,51 @@
   const { util } = VLAB;
 
   document.addEventListener('DOMContentLoaded', async ()=>{
-    const session = await VLAB.auth.requireAuth();
-    if(!session) return;
-
-    const id = new URLSearchParams(window.location.search).get('id');
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const id = params.get('id');
     const root = document.getElementById('report-root');
-    if(!id){ root.innerHTML = '<div class="report-loading">No patient specified.</div>'; return; }
+    let patient, settings, isPublic = false;
 
-    const [{ data: patient, error }, settings] = await Promise.all([
-      SB.client.from('patients').select('*').eq('id', id).single(),
-      SB.data.getSettings()
-    ]);
-
-    if(error || !patient){
-      root.innerHTML = '<div class="report-loading">Could not load this patient\'s report.</div>';
-      return;
+    if(token){
+      // Public link — no login required. The token itself is the only key;
+      // this can never return another patient's data (see 008_public_report_share.sql).
+      isPublic = true;
+      const { data, error } = await SB.client.rpc('get_public_report', { p_token: token });
+      const row = Array.isArray(data) ? data[0] : data;
+      if(error || !row){ root.innerHTML = '<div class="report-loading">This report link is invalid or has expired.</div>'; return; }
+      patient = row;
+      settings = {
+        lab_name: row.lab_name, address: row.lab_address, phone: row.lab_phone, email: row.lab_email,
+        pathologist_name: row.pathologist_name, pathologist_qualification: row.pathologist_qualification,
+        pathologist_reg_no: row.pathologist_reg_no
+      };
+    }else{
+      const session = await VLAB.auth.requireAuth();
+      if(!session) return;
+      if(!id){ root.innerHTML = '<div class="report-loading">No patient specified.</div>'; return; }
+      const [{ data, error }, s] = await Promise.all([
+        SB.client.from('patients').select('*').eq('id', id).single(),
+        SB.data.getSettings()
+      ]);
+      if(error || !data){ root.innerHTML = '<div class="report-loading">Could not load this patient\'s report.</div>'; return; }
+      patient = data; settings = s || {};
     }
 
     document.title = `Report · ${patient.name} · ${settings.lab_name || 'Vitals Lab'}`;
-    root.innerHTML = renderReport(patient, settings || {}, 'full');
-    renderStatusBanner(patient);
+    root.innerHTML = renderReport(patient, settings, 'full');
+    if(!isPublic) renderStatusBanner(patient);
 
     document.querySelectorAll('input[name="header-mode"]').forEach(radio=>{
       radio.addEventListener('change', ()=>{
-        root.innerHTML = renderReport(patient, settings || {}, radio.value);
+        root.innerHTML = renderReport(patient, settings, radio.value);
       });
     });
 
     document.getElementById('btn-print').addEventListener('click', ()=> window.print());
-    document.getElementById('btn-back').addEventListener('click', ()=> window.location.href='patients.html');
+    const backBtn = document.getElementById('btn-back');
+    if(isPublic) backBtn.style.display = 'none';
+    else backBtn.addEventListener('click', ()=> window.location.href='patients.html');
   });
 
   const STATUS_INFO = {
