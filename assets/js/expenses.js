@@ -2,9 +2,18 @@
    expenses.js — Admin-only Expense Management
    ======================================================================== */
 (function(){
-  const { store, util, KEYS, pools, icon } = VLAB;
+  const { util, pools, icon } = VLAB;
   let all=[], filtered=[], currentPage=1;
   const PER_PAGE = 10;
+
+  function fromDb(row){ return { ...row, invoiceNumber: row.invoice_number, paymentMode: row.payment_mode }; }
+  function toDb(e){
+    return {
+      name: e.name, category: e.category || null, vendor: e.vendor || null,
+      invoice_number: e.invoiceNumber || null, amount: e.amount,
+      payment_mode: e.paymentMode || null, date: e.date, description: e.description || null
+    };
+  }
 
   document.addEventListener('DOMContentLoaded', async ()=>{
     const session = await VLAB.renderShell('expenses');
@@ -22,7 +31,8 @@
     }
 
     VLAB.setPageTitle('Expenses', 'Vitals Lab / Expense Management');
-    all = store.get(KEYS.expenses, []);
+    const rows = await SB.data.list('expenses', { order:'date', ascending:true });
+    all = rows.map(fromDb);
     populateCategoryFilter();
     renderStats();
     renderCharts();
@@ -60,18 +70,28 @@
     Chart.defaults.font.family = "'Inter',sans-serif";
     Chart.defaults.color = dark?'#9AA4B8':'#6B7688';
 
-    const months = []; const d=new Date();
-    for(let i=5;i>=0;i--){ const dt=new Date(d.getFullYear(),d.getMonth()-i,1); months.push(dt.toLocaleDateString('en-IN',{month:'short'})); }
+    const months = []; const monthKeys = []; const d=new Date();
+    for(let i=5;i>=0;i--){
+      const dt=new Date(d.getFullYear(),d.getMonth()-i,1);
+      months.push(dt.toLocaleDateString('en-IN',{month:'short'}));
+      monthKeys.push(`${dt.getFullYear()}-${dt.getMonth()}`);
+    }
+    const monthTotals = monthKeys.map(key=>{
+      const [y,m] = key.split('-').map(Number);
+      return all.filter(e=>{ const ed=new Date(e.date); return ed.getFullYear()===y && ed.getMonth()===m; })
+                .reduce((s,e)=>s+(Number(e.amount)||0),0);
+    });
     new Chart(document.getElementById('chart-expense-trend'), {
       type:'line',
-      data:{labels:months, datasets:[{label:'Expenses', data:months.map(()=>util.rand(15000,60000)), borderColor:'#D68A1E', backgroundColor:'rgba(214,138,30,.08)', fill:true, tension:.4}]},
+      data:{labels:months, datasets:[{label:'Expenses', data:monthTotals, borderColor:'#D68A1E', backgroundColor:'rgba(214,138,30,.08)', fill:true, tension:.4}]},
       options:{responsive:true,maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{grid:{color: dark?'#2A3140':'#EEF1F6'}}, x:{grid:{display:false}}}}
     });
 
-    const cats = [...new Set(pools.expenseCategories)];
+    const cats = [...new Set(all.map(e=>e.category).filter(Boolean))];
+    const catTotals = cats.map(c=> all.filter(e=>e.category===c).reduce((s,e)=>s+(Number(e.amount)||0),0));
     new Chart(document.getElementById('chart-expense-categories'), {
       type:'doughnut',
-      data:{labels:cats, datasets:[{data:cats.map(()=>util.rand(2000,20000)), backgroundColor:['#2E5EAA','#17A2A0','#8E7CC3','#C79A2E','#4C9A6A','#3F76BF','#D68A1E','#E5484D','#3E8FDE','#6B7688'], borderWidth:0}]},
+      data:{labels:cats, datasets:[{data:catTotals, backgroundColor:['#2E5EAA','#17A2A0','#8E7CC3','#C79A2E','#4C9A6A','#3F76BF','#D68A1E','#E5484D','#3E8FDE','#6B7688'], borderWidth:0}]},
       options:{responsive:true,maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:9, font:{size:10}}}}}
     });
   }
@@ -123,33 +143,41 @@
     VLAB.renderPagination(document.getElementById('expenses-pagination'), {page,totalPages,total}, p=>{currentPage=p;render();});
   }
 
-  function save(){
+  async function save(){
     const name = document.getElementById('e-name').value.trim();
     const amount = Number(document.getElementById('e-amount').value)||0;
     if(!name || !amount){ VLAB.toast('Expense name and amount are required.','error'); return; }
     const id = document.getElementById('e-id').value;
     const record = {
-      id: id || util.uid('EX', all.length+1+Math.floor(Math.random()*900)),
       name, category: document.getElementById('e-category').value,
       vendor: document.getElementById('e-vendor').value,
       invoiceNumber: document.getElementById('e-invoice').value,
       amount, paymentMode: document.getElementById('e-mode').value,
       date: document.getElementById('e-date').value,
-      description: document.getElementById('e-desc').value,
-      attachment:''
+      description: document.getElementById('e-desc').value
     };
-    if(id){ all[all.findIndex(x=>x.id===id)]=record; VLAB.toast('Expense updated.','success'); }
-    else{ all.push(record); VLAB.toast('Expense added.','success'); }
-    store.set(KEYS.expenses, all);
+
+    const btn = document.getElementById('expense-save-btn');
+    btn.disabled = true;
+    const saved = id
+      ? await SB.data.update('expenses', id, toDb(record))
+      : await SB.data.insert('expenses', toDb(record));
+    btn.disabled = false;
+
+    if(!saved){ VLAB.toast('Could not save expense — please try again.', 'error'); return; }
+    const full = fromDb(saved);
+    if(id){ all[all.findIndex(x=>x.id===id)]=full; VLAB.toast('Expense updated.','success'); }
+    else{ all.push(full); VLAB.toast('Expense added.','success'); }
     VLAB.closeModal('expense-modal');
     applyFilters();
     renderStats();
+    renderCharts();
   }
 
   window.ExpensesModule = {
     edit(id){
       const e = all.find(x=>x.id===id); if(!e) return;
-      document.getElementById('expense-modal-title').textContent = `Edit Expense — ${e.id}`;
+      document.getElementById('expense-modal-title').textContent = `Edit Expense — ${e.name}`;
       document.getElementById('e-id').value=e.id;
       document.getElementById('e-name').value=e.name;
       document.getElementById('e-category').value=e.category;
@@ -162,11 +190,12 @@
       VLAB.openModal('expense-modal');
     },
     remove(id){
-      VLAB.confirmDelete('Delete this expense record?', ()=>{
+      VLAB.confirmDelete('Delete this expense record?', async ()=>{
+        const ok = await SB.data.remove('expenses', id);
+        if(!ok){ VLAB.toast('Could not delete expense — please try again.', 'error'); return; }
         all = all.filter(x=>x.id!==id);
-        store.set(KEYS.expenses, all);
         VLAB.toast('Expense deleted.','success');
-        applyFilters(); renderStats();
+        applyFilters(); renderStats(); renderCharts();
       });
     }
   };

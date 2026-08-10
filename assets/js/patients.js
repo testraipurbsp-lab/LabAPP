@@ -23,7 +23,8 @@
       collectionDate: row.collection_date, reportDate: row.report_date, price: row.price,
       discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
       paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
-      photo: row.photo_url, reportData: row.report_data, unit: row.unit, shareToken: row.share_token
+      photo: row.photo_url, reportData: row.report_data, unit: row.unit, shareToken: row.share_token,
+      homeCollectionCharge: row.home_collection_charge, corporate: row.corporate
     };
   }
   function toDb(p){
@@ -39,7 +40,7 @@
       price: p.price, discount: p.discount, final_amount: p.finalAmount,
       payment_status: p.paymentStatus, payment_method: p.paymentMethod || null,
       report_status: p.reportStatus, remarks: p.remarks || null, photo_url: p.photo || null,
-      unit: p.unit || null
+      home_collection_charge: p.homeCollectionCharge || 0, corporate: !!p.corporate
     };
   }
 
@@ -82,8 +83,8 @@
 
     fillSelect('p-area', areas.map(a=>a.name));
     fillSelect('p-doctor', doctors.map(d=>d.name));
-    fillSelect('p-testcategory', ['', ...new Set(testCatalog.map(t=>t.category).filter(Boolean))]);
-    fillSelect('p-testname', testCatalog.map(t=>t.name));
+    document.getElementById('p-test-search-list').innerHTML =
+      testCatalog.map(t=>`<option value="${util.escapeHtml(t.name)}">`).join('');
     const sampleTypeSuggestions = [...new Set([
       ...pools.sampleTypes,
       ...testCatalog.map(t=>t.sample_type).filter(Boolean),
@@ -94,29 +95,59 @@
     fillSelect('p-paymentstatus', PAYMENT_STATUSES.map(s=>s.label), PAYMENT_STATUSES.map(s=>s.key));
     fillSelect('p-paymentmethod', pools.paymentMethods);
   }
-  function refilterTestNames(){
-    const category = document.getElementById('p-testcategory').value;
-    const matches = category ? testCatalog.filter(t=>t.category===category) : testCatalog;
-    fillSelect('p-testname', matches.map(t=>t.name));
-    onTestNameChange();
-  }
-  function onTestNameChange(){
-    const test = testCatalog.find(t=>t.name===document.getElementById('p-testname').value);
-    if(!test) return;
-    if(test.category) document.getElementById('p-testcategory').value = test.category;
-    if(test.sample_type) document.getElementById('p-sampletype').value = test.sample_type;
-    if(test.unit) document.getElementById('p-unit').value = test.unit;
-    if(test.price!=null) document.getElementById('p-price').value = test.price;
-  }
   function fillSelect(id, labels, values){
     const el = document.getElementById(id);
     el.innerHTML = labels.map((l,i)=>`<option value="${values?values[i]:l}">${l||'All Categories'}</option>`).join('');
   }
 
+  // ---- Itemized test lines (one visit, many tests) --------------------------
+  let testLines = [];
+  function addTestLine(test){
+    testLines.push({ testId:test.id||null, testName:test.name, category:test.category||'', rate:Number(test.price)||0, qty:1 });
+    renderTestLines();
+  }
+  function removeTestLine(idx){ testLines.splice(idx,1); renderTestLines(); }
+  function renderTestLines(){
+    const tbody = document.getElementById('p-test-lines');
+    document.getElementById('p-test-lines-empty').style.display = testLines.length ? 'none' : 'block';
+    tbody.innerHTML = testLines.map((l,i)=>`
+      <tr>
+        <td>${util.escapeHtml(l.testName)}</td>
+        <td>${util.escapeHtml(l.category||'—')}</td>
+        <td><input type="number" min="0" class="line-rate" data-idx="${i}" value="${l.rate}" style="width:100%;"></td>
+        <td><input type="number" min="0" step="1" class="line-qty" data-idx="${i}" value="${l.qty}" style="width:100%;"></td>
+        <td class="mono">${util.fmtCurrency(l.rate*l.qty)}</td>
+        <td><button type="button" class="btn btn-outline btn-sm remove-line-btn" data-idx="${i}" title="Remove">${icon('x')}</button></td>
+      </tr>`).join('');
+    recalcTotals();
+  }
+  function recalcTotals(){
+    const testAmount = testLines.reduce((sum,l)=> sum + (Number(l.rate)||0)*(Number(l.qty)||0), 0);
+    const discount = Number(document.getElementById('p-discount').value)||0;
+    const homeCollection = Number(document.getElementById('p-homecollection').value)||0;
+    document.getElementById('p-price').value = testAmount;
+    document.getElementById('p-final').value = Math.max(0, testAmount - discount + homeCollection);
+  }
+
   function wireEvents(){
     document.getElementById('search-input').addEventListener('input', util.debounce(applyFilters, 250));
-    document.getElementById('p-testcategory').addEventListener('change', refilterTestNames);
-    document.getElementById('p-testname').addEventListener('change', onTestNameChange);
+    document.getElementById('p-test-search').addEventListener('change', (e)=>{
+      const test = testCatalog.find(t=>t.name===e.target.value);
+      if(test){ addTestLine(test); e.target.value=''; }
+    });
+    document.getElementById('p-test-lines').addEventListener('input', (e)=>{
+      const idx = e.target.dataset.idx;
+      if(idx==null) return;
+      if(e.target.classList.contains('line-rate')) testLines[idx].rate = Number(e.target.value)||0;
+      if(e.target.classList.contains('line-qty')) testLines[idx].qty = Number(e.target.value)||0;
+      recalcTotals();
+    });
+    document.getElementById('p-test-lines').addEventListener('click', (e)=>{
+      const btn = e.target.closest('.remove-line-btn');
+      if(btn) removeTestLine(Number(btn.dataset.idx));
+    });
+    document.getElementById('p-discount').addEventListener('input', recalcTotals);
+    document.getElementById('p-homecollection').addEventListener('input', recalcTotals);
     document.getElementById('p-sampletype').addEventListener('change', (e)=>{
       const wrap = document.getElementById('p-sampletype-new-wrap');
       if(e.target.value === '__add_new__'){
@@ -337,12 +368,14 @@
 
   function openAddModal(){
     resetForm();
+    testLines = [];
+    renderTestLines();
     document.getElementById('patient-modal-title').textContent = 'Add New Patient';
     document.getElementById('p-collectiondate').value = util.fmtDateInput(new Date());
     VLAB.openModal('patient-modal');
   }
 
-  function openEditModal(id){
+  async function openEditModal(id){
     const p = allPatients.find(x=>x.id===id);
     if(!p) return;
     document.getElementById('patient-modal-title').textContent = `Edit Patient — ${p.patientCode||p.id}`;
@@ -364,19 +397,20 @@
     document.getElementById('p-area').value = p.area;
     document.getElementById('p-reference').value = p.reference||'Self';
     document.getElementById('p-doctor').value = p.doctor;
-    document.getElementById('p-testcategory').value = p.testCategory;
-    document.getElementById('p-testname').value = p.testName;
     document.getElementById('p-sampletype').value = p.sampleType;
-    document.getElementById('p-unit').value = p.unit||'';
     document.getElementById('p-collectiondate').value = p.collectionDate;
     document.getElementById('p-reportdate').value = p.reportDate;
     document.getElementById('p-reportstatus').value = p.reportStatus;
-    document.getElementById('p-price').value = p.price;
+    document.getElementById('p-corporate').checked = !!p.corporate;
     document.getElementById('p-discount').value = p.discount;
-    document.getElementById('p-final').value = p.finalAmount;
+    document.getElementById('p-homecollection').value = p.homeCollectionCharge||0;
     document.getElementById('p-paymentstatus').value = p.paymentStatus;
     document.getElementById('p-paymentmethod').value = p.paymentMethod;
     document.getElementById('p-remarks').value = p.remarks||'';
+
+    const rows = await SB.client.from('patient_tests').select('*').eq('patient_id', id);
+    testLines = (rows.data||[]).map(r=>({ testId:r.test_id, testName:r.test_name, category:r.category||'', rate:Number(r.rate)||0, qty:Number(r.qty)||1 }));
+    renderTestLines();
     VLAB.openModal('patient-modal');
   }
 
@@ -385,9 +419,12 @@
     const phone = document.getElementById('p-phone').value.trim();
     const area = document.getElementById('p-area').value;
     const doctor = document.getElementById('p-doctor').value;
-    const testName = document.getElementById('p-testname').value;
-    if(!name || !phone || !area || !doctor || !testName){
+    if(!name || !phone || !area || !doctor){
       VLAB.toast('Please fill all required fields marked with *.', 'error');
+      return;
+    }
+    if(!testLines.length){
+      VLAB.toast('Add at least one test to this visit.', 'error');
       return;
     }
     if(document.getElementById('p-sampletype').value === '__add_new__'){
@@ -395,8 +432,11 @@
       return;
     }
     const id = document.getElementById('p-id').value;
-    const price = Number(document.getElementById('p-price').value)||0;
+    const price = testLines.reduce((sum,l)=> sum + (Number(l.rate)||0)*(Number(l.qty)||0), 0);
     const discount = Number(document.getElementById('p-discount').value)||0;
+    const homeCollectionCharge = Number(document.getElementById('p-homecollection').value)||0;
+    const testName = testLines.map(l=>l.testName).join(', ');
+    const testCategory = testLines[0].category || '';
 
     const record = {
       name, gender: document.getElementById('p-gender').value,
@@ -413,12 +453,12 @@
       weight: Number(document.getElementById('p-weight').value)||0,
       emergencyContact: document.getElementById('p-emergency').value,
       reference: document.getElementById('p-reference').value,
-      testCategory: document.getElementById('p-testcategory').value,
-      testName, sampleType: document.getElementById('p-sampletype').value,
-      unit: document.getElementById('p-unit').value.trim(),
+      testCategory, testName, sampleType: document.getElementById('p-sampletype').value,
       collectionDate: document.getElementById('p-collectiondate').value,
       reportDate: document.getElementById('p-reportdate').value,
-      price, discount, finalAmount: Math.max(0,price-discount),
+      price, discount, homeCollectionCharge,
+      finalAmount: Math.max(0, price-discount+homeCollectionCharge),
+      corporate: document.getElementById('p-corporate').checked,
       paymentStatus: document.getElementById('p-paymentstatus').value,
       paymentMethod: document.getElementById('p-paymentmethod').value,
       reportStatus: document.getElementById('p-reportstatus').value,
@@ -435,12 +475,22 @@
     }else{
       saved = await SB.data.insert('patients', toDb(record));
     }
-    btn.disabled = false;
-
     if(!saved){
+      btn.disabled = false;
       VLAB.toast('Could not save patient — please try again.', 'error');
       return;
     }
+
+    // Replace this visit's test line items wholesale — simplest reliable
+    // way to keep patient_tests in sync with whatever's in the form.
+    if(id) await SB.client.from('patient_tests').delete().eq('patient_id', id);
+    const lineRows = testLines.map(l=>({
+      patient_id: saved.id, test_id: l.testId, test_name: l.testName,
+      category: l.category, rate: l.rate, qty: l.qty
+    }));
+    await SB.client.from('patient_tests').insert(lineRows);
+    btn.disabled = false;
+
     const full = fromDb(saved);
     if(id){
       const idx = allPatients.findIndex(p=>p.id===id);

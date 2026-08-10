@@ -97,9 +97,6 @@
           <legend>Test & Sample</legend>
           <div class="form-grid">
             <div class="field-group"><label>Doctor Name *</label><select id="p-doctor" required></select></div>
-            <div class="field-group"><label>Test Category</label><select id="p-testcategory"></select></div>
-            <div class="field-group"><label>Test Name *</label><select id="p-testname" required></select></div>
-            <div class="field-group"><label>Unit</label><input type="text" id="p-unit" placeholder="Auto-fills from test, editable"></div>
             <div class="field-group">
               <label>Sample Type</label>
               <select id="p-sampletype"></select>
@@ -111,15 +108,32 @@
             <div class="field-group"><label>Collection Date</label><input type="date" id="p-collectiondate"></div>
             <div class="field-group"><label>Report Date</label><input type="date" id="p-reportdate"></div>
             <div class="field-group"><label>Report Status</label><select id="p-reportstatus"></select></div>
+            <div class="field-group"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="p-corporate" style="width:auto;"> Corporate Billing</label></div>
           </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Tests *</legend>
+          <div class="field-group">
+            <input type="text" id="p-test-search" placeholder="Search a test to add… (e.g. CBC, Glucose)" list="p-test-search-list" autocomplete="off">
+            <datalist id="p-test-search-list"></datalist>
+          </div>
+          <div class="table-wrap" style="margin-top:8px;">
+            <table>
+              <thead><tr><th>Test Name</th><th>Category</th><th style="width:90px;">Rate (₹)</th><th style="width:70px;">Qty</th><th style="width:90px;">Amount</th><th style="width:40px;"></th></tr></thead>
+              <tbody id="p-test-lines"></tbody>
+            </table>
+          </div>
+          <p class="text-muted" id="p-test-lines-empty" style="font-size:12px;">No tests added yet — search above and pick one to add it to this visit's bill.</p>
         </fieldset>
 
         <fieldset>
           <legend>Billing</legend>
           <div class="form-grid">
-            <div class="field-group"><label>Price (₹)</label><input type="number" id="p-price" min="0"></div>
-            <div class="field-group"><label>Discount (₹)</label><input type="number" id="p-discount" min="0"></div>
-            <div class="field-group"><label>Final Amount (₹)</label><input type="number" id="p-final" readonly style="background:var(--bg);"></div>
+            <div class="field-group"><label>Test Amount (₹)</label><input type="number" id="p-price" readonly style="background:var(--bg);"></div>
+            <div class="field-group"><label>Concession (₹)</label><input type="number" id="p-discount" min="0" value="0"></div>
+            <div class="field-group"><label>Home Collection Charges (₹)</label><input type="number" id="p-homecollection" min="0" value="0"></div>
+            <div class="field-group"><label>Net Amount (₹)</label><input type="number" id="p-final" readonly style="background:var(--bg);"></div>
             <div class="field-group"><label>Payment Status</label><select id="p-paymentstatus"></select></div>
             <div class="field-group"><label>Payment Method</label><select id="p-paymentmethod"></select></div>
             <div class="field-group span-2">
