@@ -488,8 +488,10 @@ const VLAB = (() => {
       <div id="loading-screen"><div class="loader-mark">${ic('flask')}</div><div class="loader-text">Loading Vitals Lab…</div></div>
     `);
 
-    const settings = store.get(KEYS.settings, {labName:'Vitals Lab'});
-    if(settings.darkMode) document.documentElement.setAttribute('data-theme','dark');
+    const localPrefs = store.get(KEYS.settings, {});
+    if(localPrefs.darkMode) document.documentElement.setAttribute('data-theme','dark');
+    const remoteSettings = await SB.data.getSettings();
+    const settings = { labName: remoteSettings.lab_name || 'Vitals Lab', darkMode: localPrefs.darkMode };
 
     const isAdmin = session.role === 'admin';
     let navHtml = '';
@@ -703,4 +705,4 @@ const VLAB = (() => {
 })();
 
 // Seed on every load (idempotent)
-VLAB.seedIfNeeded();
+VLAB.seedIfNeeded();  

@@ -23,6 +23,7 @@
       patient = row;
       settings = {
         lab_name: row.lab_name, address: row.lab_address, phone: row.lab_phone, email: row.lab_email,
+        logo_url: row.lab_logo_url,
         pathologist_name: row.pathologist_name, pathologist_qualification: row.pathologist_qualification,
         pathologist_reg_no: row.pathologist_reg_no
       };
@@ -113,7 +114,7 @@
       </div>` : `
       <div class="report-banner">
         <div class="banner-ribbon"></div>
-        <div class="banner-logo-circle">${util.escapeHtml(initials)}</div>
+        <div class="banner-logo-circle">${s.logo_url ? `<img src="${util.escapeHtml(s.logo_url)}" alt="${util.escapeHtml(labName)} logo">` : util.escapeHtml(initials)}</div>
         <div class="banner-lab-name">${util.escapeHtml(labName)}</div>
         <div class="banner-tagline">Pathology &amp; Diagnostic Laboratory</div>
         <div class="banner-badges">${badges.map(b=>`<span class="badge-chip">${util.escapeHtml(b)}</span>`).join('')}</div>

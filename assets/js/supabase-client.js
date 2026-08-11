@@ -58,6 +58,24 @@ const SB = (() => {
       const s = await auth.current();
       if(!s){ window.location.href = 'login.html'; return null; }
       return s;
+    },
+    async updateProfileName(newName){
+      const { data: { session } } = await client.auth.getSession();
+      if(!session) return { ok:false, msg:'Not signed in.' };
+      const { error } = await client.from('profiles').update({ name: newName }).eq('id', session.user.id);
+      if(error) return { ok:false, msg:'Could not update profile — please try again.' };
+      return { ok:true };
+    },
+    async changePassword(currentPassword, newPassword){
+      const { data: { session } } = await client.auth.getSession();
+      if(!session) return { ok:false, msg:'Not signed in.' };
+      // Re-verify the current password against Supabase's own auth service
+      // (rather than comparing a stored plaintext value) before changing it.
+      const { error: reauthErr } = await client.auth.signInWithPassword({ email: session.user.email, password: currentPassword });
+      if(reauthErr) return { ok:false, msg:'Current password is incorrect.' };
+      const { error } = await client.auth.updateUser({ password: newPassword });
+      if(error) return { ok:false, msg:'Could not change password — please try again.' };
+      return { ok:true };
     }
   };
 

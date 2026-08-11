@@ -10,21 +10,51 @@
     if(!session) return;
     VLAB.setPageTitle('Settings', 'Vitals Lab / Settings');
 
-    const settings = store.get(KEYS.settings, {});
-    document.getElementById('s-labname').value = settings.labName||'';
+    const settings = await SB.data.getSettings();
+    document.getElementById('s-labname').value = settings.lab_name||'';
     document.getElementById('s-phone').value = settings.phone||'';
     document.getElementById('s-email').value = settings.email||'';
     document.getElementById('s-gst').value = settings.gst||'';
     document.getElementById('s-address').value = settings.address||'';
+    document.getElementById('s-pathologist-name').value = settings.pathologist_name||'';
+    document.getElementById('s-pathologist-qual').value = settings.pathologist_qualification||'';
+    document.getElementById('s-pathologist-reg').value = settings.pathologist_reg_no||'';
+    if(settings.logo_url) showLogoPreview(settings.logo_url);
 
     document.getElementById('profile-name-display').textContent = session.name;
     document.getElementById('profile-role-display').textContent = session.role==='admin'?'Administrator':'Staff';
     document.getElementById('profile-avatar').textContent = util.initials(session.name);
     document.getElementById('profile-name').value = session.name;
 
-    setupToggle(!!settings.darkMode);
+    if(session.role !== 'admin'){
+      document.getElementById('lab-form').querySelectorAll('input, button[type="submit"]').forEach(el=> el.disabled = true);
+      document.getElementById('logo-box').style.pointerEvents = 'none';
+      document.getElementById('logo-change-btn').disabled = true;
+      document.getElementById('logo-remove-btn').disabled = true;
+      const note = document.createElement('p');
+      note.className = 'text-muted';
+      note.style.cssText = 'font-size:12px;margin-top:10px;';
+      note.textContent = 'Only administrators can edit the lab profile.';
+      document.getElementById('lab-form').appendChild(note);
+    }
+
+    // Dark mode is a per-device display preference, not lab data — stays
+    // in localStorage on purpose, same as before.
+    setupToggle(!!store.get(KEYS.settings, {}).darkMode);
     wire();
   });
+
+  function showLogoPreview(url){
+    const box = document.getElementById('logo-box');
+    box.innerHTML = `<img src="${url}" alt="Lab logo" style="max-height:52px;max-width:160px;object-fit:contain;pointer-events:none;">`;
+    document.getElementById('logo-actions').style.display = 'flex';
+  }
+  function resetLogoBox(){
+    const box = document.getElementById('logo-box');
+    box.innerHTML = `${icon('image','icon-lg')}Click to upload lab logo`;
+    window.Icons.hydrate(box);
+    document.getElementById('logo-actions').style.display = 'none';
+  }
 
   function setupToggle(isDark){
     const track = document.getElementById('toggle-track');
@@ -51,47 +81,91 @@
   }
 
   function wire(){
-    document.getElementById('lab-form').addEventListener('submit', (e)=>{
+    document.getElementById('lab-form').addEventListener('submit', async (e)=>{
       e.preventDefault();
-      const s = store.get(KEYS.settings, {});
-      s.labName = document.getElementById('s-labname').value;
-      s.phone = document.getElementById('s-phone').value;
-      s.email = document.getElementById('s-email').value;
-      s.gst = document.getElementById('s-gst').value;
-      s.address = document.getElementById('s-address').value;
-      store.set(KEYS.settings, s);
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      const saved = await SB.data.updateSettings({
+        lab_name: document.getElementById('s-labname').value,
+        phone: document.getElementById('s-phone').value,
+        email: document.getElementById('s-email').value,
+        gst: document.getElementById('s-gst').value,
+        address: document.getElementById('s-address').value,
+        pathologist_name: document.getElementById('s-pathologist-name').value,
+        pathologist_qualification: document.getElementById('s-pathologist-qual').value,
+        pathologist_reg_no: document.getElementById('s-pathologist-reg').value
+      });
+      btn.disabled = false;
+      if(!saved){ VLAB.toast('Could not save lab profile — please try again.', 'error'); return; }
       VLAB.toast('Lab profile updated. Refresh to see sidebar branding change.', 'success');
     });
 
-    document.getElementById('logo-box').addEventListener('click', ()=>document.getElementById('s-logo').click());
-    document.getElementById('s-logo').addEventListener('change', (e)=>{
+    document.getElementById('logo-box').addEventListener('click', ()=>{
+      if(document.getElementById('logo-actions').style.display === 'none') document.getElementById('s-logo').click();
+    });
+    document.getElementById('logo-change-btn').addEventListener('click', ()=> document.getElementById('s-logo').click());
+    document.getElementById('logo-remove-btn').addEventListener('click', async ()=>{
+      const btn = document.getElementById('logo-remove-btn');
+      btn.disabled = true;
+      const current = await SB.data.getSettings();
+      if(current.logo_url){
+        const match = current.logo_url.match(/logo\.[a-zA-Z0-9]+/);
+        if(match) await SB.client.storage.from('lab-assets').remove([match[0]]);
+      }
+      const saved = await SB.data.updateSettings({ logo_url: null });
+      btn.disabled = false;
+      if(!saved){ VLAB.toast('Could not remove logo — please try again.', 'error'); return; }
+      resetLogoBox();
+      VLAB.toast('Logo removed.', 'success');
+    });
+    document.getElementById('s-logo').addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
       const box = document.getElementById('logo-box');
-      if(e.target.files[0]) box.innerHTML = `${icon('check-circle')} ${util.escapeHtml(e.target.files[0].name)} uploaded`;
+      const original = box.innerHTML;
+      box.innerHTML = `${icon('loader','icon-spin')} Uploading…`;
+
+      const ext = file.name.split('.').pop();
+      const path = `logo.${ext}`;
+      const { error: uploadErr } = await SB.client.storage.from('lab-assets').upload(path, file, { upsert:true, cacheControl:'3600' });
+      if(uploadErr){
+        box.innerHTML = original;
+        VLAB.toast('Could not upload logo — please try again.', 'error');
+        return;
+      }
+      const { data: { publicUrl } } = SB.client.storage.from('lab-assets').getPublicUrl(path);
+      const url = `${publicUrl}?t=${Date.now()}`; // cache-bust so a re-upload shows immediately
+      const saved = await SB.data.updateSettings({ logo_url: url });
+      if(!saved){
+        box.innerHTML = original;
+        VLAB.toast('Logo uploaded but could not save — please try again.', 'error');
+        return;
+      }
+      showLogoPreview(url);
+      VLAB.toast('Logo updated.', 'success');
     });
 
-    document.getElementById('save-profile-btn').addEventListener('click', ()=>{
+    document.getElementById('save-profile-btn').addEventListener('click', async ()=>{
       const newName = document.getElementById('profile-name').value.trim();
       if(!newName){ VLAB.toast('Name cannot be empty.', 'error'); return; }
-      const s = store.get(KEYS.session);
-      s.name = newName;
-      store.set(KEYS.session, s);
-      const users = store.get(KEYS.users, []);
-      const u = users.find(u=>u.username===s.username);
-      if(u) u.name = newName;
-      store.set(KEYS.users, users);
+      const btn = document.getElementById('save-profile-btn');
+      btn.disabled = true;
+      const result = await SB.auth.updateProfileName(newName);
+      btn.disabled = false;
+      if(!result.ok){ VLAB.toast(result.msg, 'error'); return; }
       VLAB.toast('Profile updated successfully.', 'success');
       setTimeout(()=>window.location.reload(), 700);
     });
 
-    document.getElementById('change-pass-btn').addEventListener('click', ()=>{
+    document.getElementById('change-pass-btn').addEventListener('click', async ()=>{
       const cur = document.getElementById('cur-pass').value;
       const next = document.getElementById('new-pass').value;
-      const users = store.get(KEYS.users, []);
-      const u = users.find(x=>x.username===session.username);
-      if(!u || u.password !== cur){ VLAB.toast('Current password is incorrect.', 'error'); return; }
-      if(!next || next.length<4){ VLAB.toast('New password must be at least 4 characters.', 'error'); return; }
-      u.password = next;
-      store.set(KEYS.users, users);
+      if(!next || next.length<6){ VLAB.toast('New password must be at least 6 characters.', 'error'); return; }
+      const btn = document.getElementById('change-pass-btn');
+      btn.disabled = true;
+      const result = await SB.auth.changePassword(cur, next);
+      btn.disabled = false;
+      if(!result.ok){ VLAB.toast(result.msg, 'error'); return; }
       document.getElementById('cur-pass').value='';
       document.getElementById('new-pass').value='';
       VLAB.toast('Password changed successfully.', 'success');
