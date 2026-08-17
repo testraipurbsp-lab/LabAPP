@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Worklist · Vitals Lab</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/responsive.css">
+</head>
+<body>
+<div class="app-shell">
+  <div class="main-area">
+    <div id="topbar-host"></div>
+    <div class="page-content">
+      <div class="flex-between mb-16" style="flex-wrap:wrap;gap:10px;">
+        <div><h2 style="font-family:var(--font-display);font-size:18px;">Worklist</h2><p class="text-muted" style="font-size:12.5px;">Every booking, lab-wide — see what's pending vs done at a glance</p></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+          <div class="search-box"><span data-icon="search"></span><input type="text" id="search-input" placeholder="Search patient name or phone…"></div>
+          <input type="date" id="filter-from" title="From date">
+          <input type="date" id="filter-to" title="To date">
+          <select id="filter-status"><option value="">All Status</option></select>
+          <select id="filter-doctor"><option value="">All Doctors</option></select>
+          <button class="btn btn-outline" id="clear-filters-btn"><span data-icon="x"></span> Clear</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient ID</th><th>Patient</th><th>Age/Gender</th><th>Doctor</th><th>Tests Done</th><th>Net Amount</th><th>Payment</th><th>Report Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="worklist-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="worklist-pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/vendor/supabase/supabase.js"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/worklist.js"></script>
+</body>
+</html>

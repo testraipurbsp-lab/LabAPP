@@ -133,6 +133,7 @@
             <div class="field-group"><label>Test Amount (₹)</label><input type="number" id="p-price" readonly style="background:var(--bg);"></div>
             <div class="field-group"><label>Concession (₹)</label><input type="number" id="p-discount" min="0" value="0"></div>
             <div class="field-group"><label>Home Collection Charges (₹)</label><input type="number" id="p-homecollection" min="0" value="0"></div>
+            <div class="field-group"><label>Referral Fee (₹)</label><input type="number" id="p-referralfee" min="0" value="0" placeholder="Doctor commission, tracked separately"></div>
             <div class="field-group"><label>Net Amount (₹)</label><input type="number" id="p-final" readonly style="background:var(--bg);"></div>
             <div class="field-group"><label>Payment Status</label><select id="p-paymentstatus"></select></div>
             <div class="field-group"><label>Payment Method</label><select id="p-paymentmethod"></select></div>
@@ -185,10 +186,12 @@
           <button type="button" class="btn btn-outline" id="share-copy-btn">Copy</button>
         </div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:14px;">
-        <a id="share-whatsapp-link" target="_blank" class="btn btn-primary" style="flex:1;text-align:center;text-decoration:none;">Share via WhatsApp</a>
-        <a id="share-email-link" class="btn btn-outline" style="flex:1;text-align:center;text-decoration:none;">Share via Email</a>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <a id="share-whatsapp-link" target="_blank" class="btn btn-primary" style="flex:1;min-width:140px;text-align:center;text-decoration:none;">Share via WhatsApp</a>
+        <a id="share-email-link" class="btn btn-outline" style="flex:1;min-width:140px;text-align:center;text-decoration:none;">Share via Email</a>
+        <a id="share-sms-link" class="btn btn-outline" style="flex:1;min-width:140px;text-align:center;text-decoration:none;">Share via SMS</a>
       </div>
+      <p class="text-muted" style="font-size:11px;margin-top:10px;margin-bottom:0;">SMS opens your phone's own Messages app — works on mobile devices, and doesn't use any paid SMS service.</p>
     </div>
   </div>
 </div>
@@ -202,7 +205,11 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="report-patient-id">
-      <p class="text-muted" style="margin-top:0;">Group results the same way they'll print — e.g. one section per category
+      <div class="field-group" id="report-checklist-wrap">
+        <label>Booked Tests — Mark Completed as You Finish Each One</label>
+        <div id="report-test-checklist" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+      <p class="text-muted" style="margin-top:10px;">Group results the same way they'll print — e.g. one section per category
         like "Erythrocytes" or "Liver Function Test", with a row for each investigation.</p>
       <div id="report-sections"></div>
       <div class="flex-between" style="gap:8px;margin-bottom:10px;flex-wrap:wrap;">

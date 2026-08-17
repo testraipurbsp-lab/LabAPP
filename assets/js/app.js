@@ -97,6 +97,7 @@ const VLAB = (() => {
       return d;
     },
     fmtDate(d){
+      if(!d) return '-';
       if(typeof d === 'string') d = new Date(d);
       if(isNaN(d)) return '-';
       return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
@@ -462,6 +463,7 @@ const VLAB = (() => {
     ]},
     {section:'Laboratory', items:[
       {href:'patients.html', icon:'activity', label:'Patients', key:'patients'},
+      {href:'worklist.html', icon:'list', label:'Worklist', key:'worklist'},
       {href:'doctors.html', icon:'stethoscope', label:'Doctors', key:'doctors'},
       {href:'areas.html', icon:'map-pin', label:'Area Management', key:'areas'},
       {href:'tests.html', icon:'flask', label:'Tests', key:'tests'},
@@ -671,7 +673,7 @@ const VLAB = (() => {
      12. PAGINATION HELPER
   --------------------------------------------------------------------- */
   function paginate(data, page, perPage){
-    const total = data.length;
+    const total = data.length; 
     const totalPages = Math.max(1, Math.ceil(total/perPage));
     page = Math.min(Math.max(1,page), totalPages);
     const start = (page-1)*perPage;
@@ -705,4 +707,4 @@ const VLAB = (() => {
 })();
 
 // Seed on every load (idempotent)
-VLAB.seedIfNeeded();  
+VLAB.seedIfNeeded();

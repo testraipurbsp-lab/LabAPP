@@ -24,7 +24,7 @@
       discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
       paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
       photo: row.photo_url, reportData: row.report_data, unit: row.unit, shareToken: row.share_token,
-      homeCollectionCharge: row.home_collection_charge, corporate: row.corporate
+      homeCollectionCharge: row.home_collection_charge, corporate: row.corporate, referralFee: row.referral_fee
     };
   }
   function toDb(p){
@@ -40,7 +40,7 @@
       price: p.price, discount: p.discount, final_amount: p.finalAmount,
       payment_status: p.paymentStatus, payment_method: p.paymentMethod || null,
       report_status: p.reportStatus, remarks: p.remarks || null, photo_url: p.photo || null,
-      home_collection_charge: p.homeCollectionCharge || 0, corporate: !!p.corporate
+      home_collection_charge: p.homeCollectionCharge || 0, corporate: !!p.corporate, referral_fee: p.referralFee || 0
     };
   }
 
@@ -103,7 +103,7 @@
   // ---- Itemized test lines (one visit, many tests) --------------------------
   let testLines = [];
   function addTestLine(test){
-    testLines.push({ testId:test.id||null, testName:test.name, category:test.category||'', rate:Number(test.price)||0, qty:1 });
+    testLines.push({ id:null, testId:test.id||null, testName:test.name, category:test.category||'', rate:Number(test.price)||0, qty:1, resultStatus:'pending' });
     renderTestLines();
   }
   function removeTestLine(idx){ testLines.splice(idx,1); renderTestLines(); }
@@ -217,6 +217,14 @@
       document.getElementById('report-category-select').value = '';
     });
     document.getElementById('report-save-btn').addEventListener('click', saveReportResults);
+    document.getElementById('report-test-checklist').addEventListener('change', (e)=>{
+      if(!e.target.classList.contains('checklist-toggle')) return;
+      const label = e.target.closest('label');
+      const pill = label.querySelector('.pill');
+      const done = e.target.checked;
+      pill.className = `pill ${done?'pill-green':'pill-lavender'}`;
+      pill.innerHTML = `<span class="cap-dot"></span>${done?'Completed':'Pending'}`;
+    });
     document.getElementById('report-sections').addEventListener('click', (e)=>{
       const addRowBtn = e.target.closest('.add-row-btn');
       const removeRowBtn = e.target.closest('.remove-row-btn');
@@ -255,7 +263,8 @@
       <textarea class="section-interp-input" placeholder="Interpretation (optional)" style="width:100%;margin-top:10px;min-height:50px;">${util.escapeHtml(sec.interpretation||'')}</textarea>
     </div>`;
   }
-  function openReportModal(id){
+  let checklistLines = [];
+  async function openReportModal(id){
     const p = allPatients.find(x=>x.id===id);
     if(!p) return;
     document.getElementById('report-patient-id').value = id;
@@ -266,7 +275,25 @@
     document.getElementById('report-category-select').innerHTML =
       '<option value="">Add from Test Category…</option>' +
       categories.map(c=>`<option value="${util.escapeHtml(c)}">${util.escapeHtml(c)}</option>`).join('');
+
+    const rows = await SB.client.from('patient_tests').select('*').eq('patient_id', id);
+    checklistLines = rows.data||[];
+    renderChecklist();
     VLAB.openModal('report-modal');
+  }
+  function renderChecklist(){
+    const wrap = document.getElementById('report-checklist-wrap');
+    const box = document.getElementById('report-test-checklist');
+    if(!checklistLines.length){ wrap.style.display='none'; return; }
+    wrap.style.display='block';
+    box.innerHTML = checklistLines.map(l=>{
+      const done = l.result_status === 'completed';
+      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border-color,#333);border-radius:6px;cursor:pointer;">
+        <input type="checkbox" class="checklist-toggle" data-id="${l.id}" ${done?'checked':''} style="width:auto;">
+        <span style="flex:1;">${util.escapeHtml(l.test_name)}${l.category?` <span class="text-muted">(${util.escapeHtml(l.category)})</span>`:''}</span>
+        <span class="pill ${done?'pill-green':'pill-lavender'}"><span class="cap-dot"></span>${done?'Completed':'Pending'}</span>
+      </label>`;
+    }).join('');
   }
   function collectReportSections(){
     return [...document.querySelectorAll('#report-sections .report-section-block')].map(block=>{
@@ -287,7 +314,13 @@
     const btn = document.getElementById('report-save-btn');
     btn.disabled = true;
     const saved = await SB.data.update('patients', id, { report_data: sections });
+
+    const toggles = [...document.querySelectorAll('.checklist-toggle')];
+    for(const t of toggles){
+      await SB.client.from('patient_tests').update({ result_status: t.checked?'completed':'pending' }).eq('id', t.dataset.id);
+    }
     btn.disabled = false;
+
     if(!saved){ VLAB.toast('Could not save results — please try again.', 'error'); return; }
     const idx = allPatients.findIndex(x=>x.id===id);
     if(idx>-1) allPatients[idx].reportData = saved.report_data;
@@ -404,12 +437,13 @@
     document.getElementById('p-corporate').checked = !!p.corporate;
     document.getElementById('p-discount').value = p.discount;
     document.getElementById('p-homecollection').value = p.homeCollectionCharge||0;
+    document.getElementById('p-referralfee').value = p.referralFee||0;
     document.getElementById('p-paymentstatus').value = p.paymentStatus;
     document.getElementById('p-paymentmethod').value = p.paymentMethod;
     document.getElementById('p-remarks').value = p.remarks||'';
 
     const rows = await SB.client.from('patient_tests').select('*').eq('patient_id', id);
-    testLines = (rows.data||[]).map(r=>({ testId:r.test_id, testName:r.test_name, category:r.category||'', rate:Number(r.rate)||0, qty:Number(r.qty)||1 }));
+    testLines = (rows.data||[]).map(r=>({ id:r.id, testId:r.test_id, testName:r.test_name, category:r.category||'', rate:Number(r.rate)||0, qty:Number(r.qty)||1, resultStatus:r.result_status||'pending' }));
     renderTestLines();
     VLAB.openModal('patient-modal');
   }
@@ -435,6 +469,7 @@
     const price = testLines.reduce((sum,l)=> sum + (Number(l.rate)||0)*(Number(l.qty)||0), 0);
     const discount = Number(document.getElementById('p-discount').value)||0;
     const homeCollectionCharge = Number(document.getElementById('p-homecollection').value)||0;
+    const referralFee = Number(document.getElementById('p-referralfee').value)||0;
     const testName = testLines.map(l=>l.testName).join(', ');
     const testCategory = testLines[0].category || '';
 
@@ -456,7 +491,7 @@
       testCategory, testName, sampleType: document.getElementById('p-sampletype').value,
       collectionDate: document.getElementById('p-collectiondate').value,
       reportDate: document.getElementById('p-reportdate').value,
-      price, discount, homeCollectionCharge,
+      price, discount, homeCollectionCharge, referralFee,
       finalAmount: Math.max(0, price-discount+homeCollectionCharge),
       corporate: document.getElementById('p-corporate').checked,
       paymentStatus: document.getElementById('p-paymentstatus').value,
@@ -481,14 +516,20 @@
       return;
     }
 
-    // Replace this visit's test line items wholesale — simplest reliable
-    // way to keep patient_tests in sync with whatever's in the form.
-    if(id) await SB.client.from('patient_tests').delete().eq('patient_id', id);
-    const lineRows = testLines.map(l=>({
-      patient_id: saved.id, test_id: l.testId, test_name: l.testName,
-      category: l.category, rate: l.rate, qty: l.qty
-    }));
-    await SB.client.from('patient_tests').insert(lineRows);
+    // Sync test lines with a real diff — NOT a delete-all/insert-all —
+    // so an existing line's result_status (Completed/Pending) survives
+    // when the patient's billing/details are edited later.
+    if(id){
+      const existing = await SB.client.from('patient_tests').select('id').eq('patient_id', id);
+      const keepIds = testLines.filter(l=>l.id).map(l=>l.id);
+      const toDelete = (existing.data||[]).map(r=>r.id).filter(rid=> !keepIds.includes(rid));
+      if(toDelete.length) await SB.client.from('patient_tests').delete().in('id', toDelete);
+    }
+    for(const l of testLines){
+      const row = { patient_id: saved.id, test_id: l.testId, test_name: l.testName, category: l.category, rate: l.rate, qty: l.qty };
+      if(l.id) await SB.client.from('patient_tests').update(row).eq('id', l.id);
+      else await SB.client.from('patient_tests').insert(row);
+    }
     btn.disabled = false;
 
     const full = fromDb(saved);
@@ -547,6 +588,7 @@
           ${infoRow('Price', util.fmtCurrency(p.price))}
           ${infoRow('Discount', util.fmtCurrency(p.discount))}
           ${infoRow('Final Amount', util.fmtCurrency(p.finalAmount))}
+          ${infoRow('Referral Fee', util.fmtCurrency(p.referralFee||0))}
           ${infoRow('Payment Method', p.paymentMethod)}
         </div>
         ${p.remarks?`<div class="mb-8" style="margin-top:14px;"><strong style="font-size:12px;">Remarks:</strong><p class="text-muted" style="font-size:12.5px;">${util.escapeHtml(p.remarks)}</p></div>`:''}
@@ -568,6 +610,7 @@
       const message = encodeURIComponent(`Hi ${p.name}, here's your lab report from Vitals Lab: ${link}`);
       document.getElementById('share-whatsapp-link').href = `https://wa.me/${p.phone?p.phone.replace(/\D/g,''):''}?text=${message}`;
       document.getElementById('share-email-link').href = `mailto:?subject=${encodeURIComponent('Your Lab Report - Vitals Lab')}&body=${message}`;
+      document.getElementById('share-sms-link').href = `sms:${p.phone?p.phone.replace(/\D/g,''):''}?body=${message}`;
       VLAB.openModal('share-modal');
     },
     remove(id){

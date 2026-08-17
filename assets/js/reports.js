@@ -2,8 +2,9 @@
    reports.js — Daily/Weekly/Monthly/Revenue/Expense/Collection/Patient reports
    ======================================================================== */
 (function(){
-  const { store, util, KEYS, icon } = VLAB;
+  const { util, icon } = VLAB;
   let session;
+  let patientsData = [], paymentsData = [], expensesData = [];
 
   document.addEventListener('DOMContentLoaded', async ()=>{
     session = await VLAB.renderShell('reports');
@@ -13,6 +14,26 @@
     if(session.role !== 'admin'){
       document.getElementById('expense-report-opt').remove();
     }
+
+    const [patients, payments, expenses] = await Promise.all([
+      SB.data.list('patients', { order:'collection_date', ascending:true }),
+      SB.data.list('payments', { order:'date', ascending:true }),
+      session.role==='admin' ? SB.data.list('expenses', { order:'date', ascending:true }) : Promise.resolve([])
+    ]);
+    patientsData = patients.map(p=>({
+      id: p.patient_code||p.id, name: p.name, testName: p.test_name, doctor: p.doctor,
+      finalAmount: Number(p.final_amount)||0, discount: Number(p.discount)||0,
+      reportStatus: p.report_status, collectionDate: p.collection_date,
+      gender: p.gender, age: p.age, area: p.area
+    }));
+    paymentsData = payments.map(p=>({
+      id: p.receipt_code||p.id, patient: p.patient, doctor: p.doctor,
+      finalAmount: Number(p.final_amount)||0, method: p.method, date: p.date
+    }));
+    expensesData = expenses.map(e=>({
+      name: e.name, category: e.category, vendor: e.vendor,
+      amount: Number(e.amount)||0, paymentMode: e.payment_mode, date: e.date
+    }));
 
     document.getElementById('report-type').addEventListener('change', renderReport);
     document.getElementById('print-report-btn').addEventListener('click', ()=>window.print());
@@ -38,9 +59,9 @@
     const type = document.getElementById('report-type').value;
     if(type === 'expense' && session.role !== 'admin'){ document.getElementById('report-type').value='daily'; return renderReport(); }
 
-    const patients = store.get(KEYS.patients, []);
-    const payments = store.get(KEYS.payments, []);
-    const expenses = store.get(KEYS.expenses, []);
+    const patients = patientsData;
+    const payments = paymentsData;
+    const expenses = expensesData;
 
     let title='', headers=[], rows=[], stats=[];
 
