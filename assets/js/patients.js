@@ -229,25 +229,81 @@
       const addRowBtn = e.target.closest('.add-row-btn');
       const removeRowBtn = e.target.closest('.remove-row-btn');
       const removeSectionBtn = e.target.closest('.remove-section-btn');
+      const toggleFormulaBtn = e.target.closest('.toggle-formula-btn');
       if(addRowBtn){
         addRowBtn.closest('.report-section-block').querySelector('.report-rows').insertAdjacentHTML('beforeend', rowHtml());
       }else if(removeRowBtn){
-        removeRowBtn.closest('.report-row').remove();
+        const wrap = removeRowBtn.closest('.report-row-wrap');
+        const section = wrap.closest('.report-section-block');
+        wrap.remove();
+        recalcFormulas(section);
       }else if(removeSectionBtn){
         removeSectionBtn.closest('.report-section-block').remove();
+      }else if(toggleFormulaBtn){
+        const formulaWrap = toggleFormulaBtn.closest('.report-row-wrap').querySelector('.row-formula-wrap');
+        const showing = formulaWrap.style.display !== 'none';
+        formulaWrap.style.display = showing ? 'none' : 'flex';
+        const valueInput = toggleFormulaBtn.closest('.report-row').querySelector('.row-value');
+        if(showing){ formulaWrap.querySelector('.row-formula').value=''; valueInput.readOnly=false; valueInput.style.background=''; }
+        else{ valueInput.readOnly=true; valueInput.style.background='var(--bg)'; recalcFormulas(toggleFormulaBtn.closest('.report-section-block')); }
       }
+    });
+    document.getElementById('report-sections').addEventListener('input', (e)=>{
+      if(e.target.classList.contains('row-value') || e.target.classList.contains('row-investigation') || e.target.classList.contains('row-formula')){
+        recalcFormulas(e.target.closest('.report-section-block'));
+      }
+    });
+  }
+
+  // Safe formula evaluation: {Investigation Name} tokens get substituted
+  // with that row's current numeric value, then the result is checked to
+  // contain ONLY digits/operators/parentheses before evaluating — never
+  // raw user text, so this can't execute arbitrary code.
+  function recalcFormulas(sectionBlock){
+    if(!sectionBlock) return;
+    const rowWraps = [...sectionBlock.querySelectorAll('.report-row-wrap')];
+    const values = {};
+    rowWraps.forEach(w=>{
+      const name = w.querySelector('.row-investigation').value.trim();
+      const val = w.querySelector('.row-value').value.trim();
+      if(name) values[name] = val;
+    });
+    rowWraps.forEach(w=>{
+      const formulaInput = w.querySelector('.row-formula');
+      const formula = formulaInput ? formulaInput.value.trim() : '';
+      if(!formula) return;
+      const valueInput = w.querySelector('.row-value');
+      const substituted = formula.replace(/\{([^}]+)\}/g, (m, name)=>{
+        const v = values[name.trim()];
+        return (v!==undefined && v!=='' && !isNaN(v)) ? v : 'NaN';
+      });
+      if(!/^[0-9+\-*/().\s]+$/.test(substituted) || substituted.includes('NaN')){
+        valueInput.value = '—';
+        return;
+      }
+      try{
+        const result = Function(`"use strict"; return (${substituted});`)();
+        valueInput.value = Number.isFinite(result) ? Math.round(result*100)/100 : '—';
+      }catch{ valueInput.value = '—'; }
     });
   }
 
   // ---- Test Results entry (per patient, feeds the printed report) ----------
   function rowHtml(r){
     r = r || {};
-    return `<div class="report-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr auto;gap:8px;margin-bottom:6px;">
-      <input type="text" class="row-investigation" placeholder="Investigation" value="${util.escapeHtml(r.investigation||'')}">
-      <input type="text" class="row-value" placeholder="Value" value="${util.escapeHtml(r.value||'')}">
-      <input type="text" class="row-unit" placeholder="Unit" value="${util.escapeHtml(r.unit||'')}">
-      <input type="text" class="row-range" placeholder="Reference range" value="${util.escapeHtml(r.range||'')}">
-      <button type="button" class="btn btn-outline btn-sm remove-row-btn" title="Remove row">${icon('x')}</button>
+    const hasFormula = !!r.formula;
+    return `<div class="report-row-wrap" style="margin-bottom:6px;">
+      <div class="report-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr auto auto;gap:8px;">
+        <input type="text" class="row-investigation" placeholder="Investigation" value="${util.escapeHtml(r.investigation||'')}">
+        <input type="text" class="row-value" placeholder="Value" value="${util.escapeHtml(r.value||'')}" ${hasFormula?'readonly style="background:var(--bg);"':''}>
+        <input type="text" class="row-unit" placeholder="Unit" value="${util.escapeHtml(r.unit||'')}">
+        <input type="text" class="row-range" placeholder="Reference range" value="${util.escapeHtml(r.range||'')}">
+        <button type="button" class="btn btn-outline btn-sm toggle-formula-btn" title="Auto-calculate this value from other rows">ƒx</button>
+        <button type="button" class="btn btn-outline btn-sm remove-row-btn" title="Remove row">${icon('x')}</button>
+      </div>
+      <div class="row-formula-wrap" style="display:${hasFormula?'flex':'none'};gap:6px;margin-top:6px;">
+        <input type="text" class="row-formula" placeholder="Formula using {Investigation Name} — e.g. {HbA1c}*28.7-46.7" value="${util.escapeHtml(r.formula||'')}" style="flex:1;font-size:11.5px;">
+      </div>
     </div>`;
   }
   function sectionBlockHtml(sec){
@@ -299,11 +355,12 @@
     return [...document.querySelectorAll('#report-sections .report-section-block')].map(block=>{
       const section = block.querySelector('.section-title-input').value.trim();
       const interpretation = block.querySelector('.section-interp-input').value.trim();
-      const rows = [...block.querySelectorAll('.report-row')].map(rowEl=>({
+      const rows = [...block.querySelectorAll('.report-row-wrap')].map(rowEl=>({
         investigation: rowEl.querySelector('.row-investigation').value.trim(),
         value: rowEl.querySelector('.row-value').value.trim(),
         unit: rowEl.querySelector('.row-unit').value.trim(),
-        range: rowEl.querySelector('.row-range').value.trim()
+        range: rowEl.querySelector('.row-range').value.trim(),
+        formula: rowEl.querySelector('.row-formula') ? rowEl.querySelector('.row-formula').value.trim() : ''
       })).filter(r=> r.investigation || r.value);
       return { section, rows, interpretation };
     }).filter(sec=> sec.section || sec.rows.length);
