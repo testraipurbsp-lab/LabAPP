@@ -7,13 +7,14 @@
   const PER_PAGE = 10;
 
   function fromDb(row){
-    return { ...row, sampleType: row.sample_type, normalRange: row.normal_range, reportTime: row.report_time };
+    return { ...row, sampleType: row.sample_type, normalRange: row.normal_range, reportTime: row.report_time, resultType: row.result_type||'parameter' };
   }
   function toDb(t){
     return {
       name: t.name, category: t.category || null, unit: t.unit || null,
       sample_type: t.sampleType || null, normal_range: t.normalRange || null,
-      price: t.price, report_time: t.reportTime || null, status: t.status
+      price: t.price, report_time: t.reportTime || null, status: t.status,
+      result_type: t.resultType || 'parameter'
     };
   }
 
@@ -45,9 +46,16 @@
       document.getElementById('test-form').reset();
       document.getElementById('t-id').value='';
       document.getElementById('test-modal-title').textContent='Add Test';
+      toggleResultTypeFields();
       VLAB.openModal('test-modal');
     });
+    document.getElementById('t-resulttype').addEventListener('change', toggleResultTypeFields);
     document.getElementById('test-save-btn').addEventListener('click', save);
+  }
+  function toggleResultTypeFields(){
+    const isDescriptive = document.getElementById('t-resulttype').value === 'descriptive';
+    document.getElementById('t-unit-wrap').style.display = isDescriptive ? 'none' : 'block';
+    document.getElementById('t-range-wrap').style.display = isDescriptive ? 'none' : 'block';
   }
 
   function applyFilters(){
@@ -66,17 +74,18 @@
     document.getElementById('tests-table-body').innerHTML = items.map(t=>`
       <tr>
         <td class="cell-name">${util.escapeHtml(t.name)}</td>
+        <td><span class="pill ${t.resultType==='descriptive'?'pill-blue':'pill-lavender'}"><span class="cap-dot"></span>${t.resultType==='descriptive'?'Descriptive':'Parameter'}</span></td>
         <td>${util.escapeHtml(t.category||'—')}</td>
-        <td class="mono">${util.escapeHtml(t.unit||'—')}</td>
+        <td class="mono">${t.resultType==='descriptive'?'—':util.escapeHtml(t.unit||'—')}</td>
         <td>${util.escapeHtml(t.sampleType||'—')}</td>
-        <td>${util.escapeHtml(t.normalRange||'—')}</td>
+        <td>${t.resultType==='descriptive'?'—':util.escapeHtml(t.normalRange||'—')}</td>
         <td>${util.fmtCurrency(t.price||0)}</td>
         <td><span class="pill ${t.status==='Active'?'pill-green':'pill-red'}"><span class="cap-dot"></span>${t.status}</span></td>
         <td><div class="table-actions">
           <button type="button" title="Edit" onclick="TestsModule.edit('${t.id}')">${icon('edit')}</button>
           <button type="button" title="Delete" class="danger" onclick="TestsModule.remove('${t.id}')">${icon('trash')}</button>
         </div></td>
-      </tr>`).join('') || `<tr><td colspan="8"><div class="empty-state">${icon('flask','icon-xl')}<p>No tests found</p></div></td></tr>`;
+      </tr>`).join('') || `<tr><td colspan="9"><div class="empty-state">${icon('flask','icon-xl')}<p>No tests found</p></div></td></tr>`;
     VLAB.renderPagination(document.getElementById('tests-pagination'), {page,totalPages,total}, p=>{currentPage=p;render();});
   }
 
@@ -86,6 +95,7 @@
     const id = document.getElementById('t-id').value;
     const record = {
       name, category: document.getElementById('t-category').value.trim(),
+      resultType: document.getElementById('t-resulttype').value,
       unit: document.getElementById('t-unit').value.trim(),
       sampleType: document.getElementById('t-sampletype').value.trim(),
       normalRange: document.getElementById('t-range').value.trim(),
@@ -116,6 +126,7 @@
       document.getElementById('test-modal-title').textContent = `Edit Test — ${t.name}`;
       document.getElementById('t-id').value=t.id;
       document.getElementById('t-name').value=t.name;
+      document.getElementById('t-resulttype').value=t.resultType||'parameter';
       document.getElementById('t-category').value=t.category||'';
       document.getElementById('t-unit').value=t.unit||'';
       document.getElementById('t-sampletype').value=t.sampleType||'';
@@ -123,6 +134,7 @@
       document.getElementById('t-price').value=t.price||0;
       document.getElementById('t-reporttime').value=t.reportTime||'';
       document.getElementById('t-status').value=t.status;
+      toggleResultTypeFields();
       VLAB.openModal('test-modal');
     },
     remove(id){

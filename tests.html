@@ -24,7 +24,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Test Name</th><th>Category</th><th>Unit</th><th>Sample Type</th><th>Normal Range</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Test Name</th><th>Type</th><th>Category</th><th>Unit</th><th>Sample Type</th><th>Normal Range</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="tests-table-body"></tbody>
           </table>
         </div>
@@ -41,11 +41,18 @@
       <form id="test-form">
         <input type="hidden" id="t-id">
         <div class="field-group"><label>Test Name *</label><input type="text" id="t-name" required placeholder="e.g. Blood Sugar PP"></div>
+        <div class="field-group">
+          <label>Result Type</label>
+          <select id="t-resulttype">
+            <option value="parameter">Parameter (numeric value, e.g. Hemoglobin)</option>
+            <option value="descriptive">Descriptive (free-text findings, e.g. USG report)</option>
+          </select>
+        </div>
         <div class="field-group"><label>Category</label><input type="text" id="t-category" list="t-category-list" placeholder="e.g. Immunology, Haematology"></div>
         <datalist id="t-category-list"></datalist>
-        <div class="field-group"><label>Unit</label><input type="text" id="t-unit" placeholder="e.g. mg/dL, g/dL, %"></div>
+        <div class="field-group" id="t-unit-wrap"><label>Unit</label><input type="text" id="t-unit" placeholder="e.g. mg/dL, g/dL, %"></div>
         <div class="field-group"><label>Sample Type</label><input type="text" id="t-sampletype" placeholder="e.g. Serum, EDTA Whole Blood"></div>
-        <div class="field-group"><label>Normal Range</label><input type="text" id="t-range" placeholder="e.g. 70-140"></div>
+        <div class="field-group" id="t-range-wrap"><label>Normal Range</label><input type="text" id="t-range" placeholder="e.g. 70-140"></div>
         <div class="field-group"><label>Price (₹)</label><input type="number" id="t-price" min="0"></div>
         <div class="field-group"><label>Report Time</label><input type="text" id="t-reporttime" placeholder="e.g. Same day, 24 hrs"></div>
         <div class="field-group"><label>Status</label><select id="t-status"><option>Active</option><option>Inactive</option></select></div>
