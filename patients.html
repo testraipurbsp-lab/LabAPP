@@ -219,6 +219,15 @@
         </div>
         <button type="button" class="btn btn-outline" id="add-section-btn"><span data-icon="plus"></span> Blank Section</button>
       </div>
+
+      <div id="auth-panel" style="border-top:1px solid var(--border-color,#333);padding-top:14px;margin-top:6px;">
+        <label style="display:block;margin-bottom:8px;">Report Authentication</label>
+        <div id="auth-status-lines" style="font-size:12px;color:var(--text-muted,#888);margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" id="verify-btn"><span data-icon="check"></span> Verify (Level 1)</button>
+          <button type="button" class="btn btn-primary" id="approve-btn"><span data-icon="check-circle"></span> Approve (Level 2)</button>
+        </div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" onclick="VLAB.closeModal('report-modal')">Cancel</button>

@@ -7,6 +7,7 @@
   let filtered = [];
   let currentPage = 1;
   let testCatalog = [];
+  let session;
   const PER_PAGE = 10;
 
   // Supabase's `patients` table uses snake_case columns; the rest of this
@@ -24,7 +25,8 @@
       discount: row.discount, finalAmount: row.final_amount, paymentStatus: row.payment_status,
       paymentMethod: row.payment_method, reportStatus: row.report_status, remarks: row.remarks,
       photo: row.photo_url, reportData: row.report_data, unit: row.unit, shareToken: row.share_token,
-      homeCollectionCharge: row.home_collection_charge, corporate: row.corporate, referralFee: row.referral_fee
+      homeCollectionCharge: row.home_collection_charge, corporate: row.corporate, referralFee: row.referral_fee,
+      verifiedBy: row.verified_by, verifiedAt: row.verified_at, approvedBy: row.approved_by, approvedAt: row.approved_at
     };
   }
   function toDb(p){
@@ -45,7 +47,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', async ()=>{
-    const session = await VLAB.renderShell('patients');
+    session = await VLAB.renderShell('patients');
     if(!session) return;
     VLAB.setPageTitle('Patients', 'Vitals Lab / Patient Management');
 
@@ -92,6 +94,10 @@
     ])];
     fillSelect('p-sampletype', [...sampleTypeSuggestions, '+ Add New Sample Type…'], [...sampleTypeSuggestions, '__add_new__']);
     fillSelect('p-reportstatus', CAP_STATUSES.map(s=>s.label), CAP_STATUSES.map(s=>s.key));
+    ['reviewed','completed'].forEach(key=>{
+      const opt = document.querySelector(`#p-reportstatus option[value="${key}"]`);
+      if(opt){ opt.disabled = true; opt.textContent += ' (via Verify/Approve only)'; }
+    });
     fillSelect('p-paymentstatus', PAYMENT_STATUSES.map(s=>s.label), PAYMENT_STATUSES.map(s=>s.key));
     fillSelect('p-paymentmethod', pools.paymentMethods);
   }
@@ -217,6 +223,8 @@
       document.getElementById('report-category-select').value = '';
     });
     document.getElementById('report-save-btn').addEventListener('click', saveReportResults);
+    document.getElementById('verify-btn').addEventListener('click', ()=> verifyOrApprove('verify'));
+    document.getElementById('approve-btn').addEventListener('click', ()=> verifyOrApprove('approve'));
     document.getElementById('report-test-checklist').addEventListener('change', (e)=>{
       if(!e.target.classList.contains('checklist-toggle')) return;
       const label = e.target.closest('label');
@@ -335,7 +343,27 @@
     const rows = await SB.client.from('patient_tests').select('*').eq('patient_id', id);
     checklistLines = rows.data||[];
     renderChecklist();
+    renderAuthPanel(p);
     VLAB.openModal('report-modal');
+  }
+  function renderAuthPanel(p){
+    const lines = document.getElementById('auth-status-lines');
+    const parts = [];
+    parts.push(p.verifiedBy
+      ? `✓ Verified by <strong>${util.escapeHtml(p.verifiedBy)}</strong> on ${util.fmtDate(p.verifiedAt)}`
+      : 'Not yet verified.');
+    parts.push(p.approvedBy
+      ? `✓ Approved by <strong>${util.escapeHtml(p.approvedBy)}</strong> on ${util.fmtDate(p.approvedAt)}`
+      : 'Not yet approved.');
+    lines.innerHTML = parts.join('<br>');
+
+    const verifyBtn = document.getElementById('verify-btn');
+    const approveBtn = document.getElementById('approve-btn');
+    verifyBtn.style.display = p.verifiedBy ? 'none' : 'inline-flex';
+    approveBtn.style.display = (p.verifiedBy && !p.approvedBy && session.role==='admin') ? 'inline-flex' : 'none';
+    if(p.verifiedBy && !p.approvedBy && session.role!=='admin'){
+      lines.innerHTML += '<br><span style="color:var(--warning,#D68A1E);">Awaiting admin approval (Level 2).</span>';
+    }
   }
   function renderChecklist(){
     const wrap = document.getElementById('report-checklist-wrap');
@@ -367,10 +395,25 @@
   }
   async function saveReportResults(){
     const id = document.getElementById('report-patient-id').value;
+    const p = allPatients.find(x=>x.id===id);
     const sections = collectReportSections();
+
+    let resetAuth = false;
+    if(p && (p.verifiedBy || p.approvedBy)){
+      const ok = confirm('This report was already Verified/Approved. Saving changes now will reset it back to "Processing" and require re-verification — because the underlying results just changed. Continue?');
+      if(!ok) return;
+      resetAuth = true;
+    }
+
     const btn = document.getElementById('report-save-btn');
     btn.disabled = true;
-    const saved = await SB.data.update('patients', id, { report_data: sections });
+    const patch = { report_data: sections };
+    if(resetAuth){
+      patch.report_status = 'processing';
+      patch.verified_by = null; patch.verified_at = null;
+      patch.approved_by = null; patch.approved_at = null;
+    }
+    const saved = await SB.data.update('patients', id, patch);
 
     const toggles = [...document.querySelectorAll('.checklist-toggle')];
     for(const t of toggles){
@@ -380,9 +423,26 @@
 
     if(!saved){ VLAB.toast('Could not save results — please try again.', 'error'); return; }
     const idx = allPatients.findIndex(x=>x.id===id);
-    if(idx>-1) allPatients[idx].reportData = saved.report_data;
-    VLAB.toast('Test results saved.', 'success');
+    if(idx>-1) allPatients[idx] = fromDb(saved);
+    VLAB.toast(resetAuth ? 'Results saved. Authentication reset — please re-verify.' : 'Test results saved.', 'success');
     VLAB.closeModal('report-modal');
+  }
+
+  async function verifyOrApprove(level){
+    const id = document.getElementById('report-patient-id').value;
+    const patch = level === 'verify'
+      ? { report_status: 'reviewed', verified_by: session.name, verified_at: new Date().toISOString() }
+      : { report_status: 'completed', approved_by: session.name, approved_at: new Date().toISOString() };
+    const btn = document.getElementById(level==='verify' ? 'verify-btn' : 'approve-btn');
+    btn.disabled = true;
+    const saved = await SB.data.update('patients', id, patch);
+    btn.disabled = false;
+    if(!saved){ VLAB.toast('Could not save — please try again.', 'error'); return; }
+    const idx = allPatients.findIndex(x=>x.id===id);
+    if(idx>-1) allPatients[idx] = fromDb(saved);
+    VLAB.toast(level==='verify' ? 'Marked as Verified (Level 1).' : 'Marked as Approved (Level 2) — report is now final.', 'success');
+    renderAuthPanel(allPatients[idx]);
+    applyFilters();
   }
 
   function applyFilters(){
